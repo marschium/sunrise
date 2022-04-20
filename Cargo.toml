@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 chrono = "0.4.19"
 eframe = "0.17.0"
+walkdir = "2"
+directories = "4.0.1"

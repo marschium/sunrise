@@ -3,10 +3,10 @@ mod style;
 use std::{
     fs::File,
     io::{Read, Write},
-    path::PathBuf,
+    path::PathBuf, ops::Sub,
 };
 
-use chrono::{Date, DateTime, Datelike, Local, LocalResult, NaiveDate, TimeZone};
+use chrono::{Date, DateTime, Datelike, Local, LocalResult, NaiveDate, TimeZone, Duration};
 use directories::ProjectDirs;
 use eframe::{
     egui::{self, TextEdit},
@@ -30,6 +30,10 @@ impl BufferId {
         BufferId::default()
     }
 
+    fn yesterday() -> Self {
+        Self::Date(Local::now().date().sub(Duration::days(1)))
+    }
+
     fn filepath(&self) -> PathBuf {
         match self {
             Self::Date(dt) => {
@@ -43,20 +47,10 @@ impl BufferId {
     }
 }
 
-#[derive(Default)]
-struct MyEguiApp {
-    buffer_id: BufferId,
-    buffer: String,
-    available_buffers: Vec<BufferId>,
-}
+#[derive(Debug, Default)]
+struct SavedFiles {}
 
-impl MyEguiApp {
-    pub fn load() -> Self {
-        let mut s = Self::default();
-        let _ = s.load_buffer();
-        s.update_available_buffers();
-        s
-    }
+impl SavedFiles {
 
     fn root_dir(&self) -> PathBuf {
         if let Some(project_dirs) = ProjectDirs::from("com", "marschium", "notez") {
@@ -66,9 +60,70 @@ impl MyEguiApp {
         }
     }
 
+    fn save(&self, id: &BufferId, buf: &String) -> Result<(), std::io::Error> {
+        let mut path = self.root_dir();
+        path.push(id.filepath());
+        std::fs::create_dir_all(path.parent().unwrap())?;
+        match File::create(path) {
+            Ok(mut f) => {
+                f.write_all(&buf.as_bytes())?;
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
+    }
+    
+    fn load(&mut self, id: &BufferId, buf: &mut String) -> Result<(), std::io::Error> {
+        let mut path = self.root_dir();
+        path.push(id.filepath());
+        match File::open(path) {
+            Ok(mut f) => {
+                buf.clear();
+                f.read_to_string(buf)?;
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    fn has(&self, id: &BufferId) -> bool {
+        let mut path = self.root_dir();
+        path.push(id.filepath());
+        path.exists()
+    }
+}
+
+
+
+
+#[derive(Default)]
+struct MyEguiApp {
+    buffer_id: BufferId,
+    buffer: String,
+    available_buffers: Vec<BufferId>,
+    saved_files: SavedFiles
+}
+
+impl MyEguiApp {
+    pub fn load() -> Self {
+        let mut s = Self::default();
+        // TODO if todays buffer isn't on the disk. load yesterdays and set the content
+        let copy_from_yesterday = !s.saved_files.has(&BufferId::today());
+        if copy_from_yesterday {
+            let _ = s.saved_files.load(&BufferId::yesterday(), &mut s.buffer);
+            let _ = s.saved_files.save(&BufferId::today(), &s.buffer);
+        }
+        else {
+            let _ = s.saved_files.load(&BufferId::today(), &mut s.buffer);
+        }
+
+        s.update_available_buffers();
+        s
+    }
+
     fn update_available_buffers(&mut self) {
         self.available_buffers.clear();
-        for entry in WalkDir::new(self.root_dir())
+        for entry in WalkDir::new(self.saved_files.root_dir())
             .into_iter()
             .filter_map(|e| e.ok())
         {
@@ -103,36 +158,12 @@ impl MyEguiApp {
         }
     }
 
-    fn save_buffer(&self) -> Result<(), std::io::Error> {
-        let mut path = self.root_dir();
-        path.push(self.buffer_id.filepath());
-        std::fs::create_dir_all(path.parent().unwrap())?;
-        match File::create(path) {
-            Ok(mut f) => {
-                f.write_all(&self.buffer.as_bytes())?;
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
-    }
-
-    fn load_buffer(&mut self) -> Result<(), std::io::Error> {
-        let mut path = self.root_dir();
-        path.push(self.buffer_id.filepath());
-        match File::open(path) {
-            Ok(mut f) => {
-                self.buffer.clear();
-                f.read_to_string(&mut self.buffer)?;
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
-    }
+    
 
     fn swap_to_buffer(&mut self, id: &BufferId) {
-        let _ = self.save_buffer();
+        let _ = self.saved_files.save(&self.buffer_id, &self.buffer);
         self.buffer_id = *id;
-        let _ = self.load_buffer();
+        let _ = self.saved_files.load(&self.buffer_id, &mut self.buffer);
     }
 }
 
@@ -142,6 +173,11 @@ impl epi::App for MyEguiApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
+        egui::TopBottomPanel::top("top").show(ctx, |ui| {
+            ui.centered_and_justified(|ui| {
+                ui.label(self.buffer_id.filepath().to_str().unwrap_or("???"));
+            });            
+        });
         egui::SidePanel::left("buffers").show(ctx, |ui| {
             for id in self.available_buffers.clone() {
                 if ui.button(id.filepath().to_str().unwrap()).clicked() {
@@ -152,17 +188,17 @@ impl epi::App for MyEguiApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             // TODO autosave
             // TODO make these hotkeys
-            ui.horizontal(|ui| {
-                if ui.button("Save").clicked() {
-                    let _ = self.save_buffer(); // TODO show error
-                }
-                if ui.button("Load").clicked() {
-                    let _ = self.load_buffer(); // TODO show error
-                }
-                if ui.button("Today").clicked() {
-                    self.swap_to_buffer(&BufferId::today())
-                }
-            });
+            // ui.horizontal(|ui| {
+            //     if ui.button("Save").clicked() {
+            //         let _ = self.save_buffer(); // TODO show error
+            //     }
+            //     if ui.button("Load").clicked() {
+            //         let _ = self.load_buffer(); // TODO show error
+            //     }
+            //     if ui.button("Today").clicked() {
+            //         self.swap_to_buffer(&BufferId::today())
+            //     }
+            // });
 
             let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
                 let mut layout_job: egui::text::LayoutJob = style::highlight(string);

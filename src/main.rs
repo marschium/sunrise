@@ -5,13 +5,14 @@ use std::{
     io::{Read, Write},
     path::PathBuf, ops::Sub,
 };
+use std::thread::JoinHandle;
 
-use chrono::{Date, DateTime, Datelike, Local, LocalResult, NaiveDate, TimeZone, Duration};
+use chrono::{Date, Local, LocalResult, TimeZone, Datelike};
 use directories::ProjectDirs;
 use eframe::{
-    egui::{self, TextEdit, Key},
-    epi,
+    egui::{self, TextEdit, Key}, epi,
 };
+use eframe::epi::App;
 use walkdir::WalkDir;
 
 #[derive(Copy, Clone, Debug)]
@@ -31,7 +32,7 @@ impl BufferId {
     }
 
     fn yesterday() -> Self {
-        Self::Date(Local::now().date().sub(Duration::days(1)))
+        Self::Date(Local::now().date().sub(chrono::Duration::days(1)))
     }
 
     fn filepath(&self) -> PathBuf {
@@ -53,7 +54,7 @@ struct SavedFiles {}
 impl SavedFiles {
 
     fn root_dir(&self) -> PathBuf {
-        if let Some(project_dirs) = ProjectDirs::from("com", "marschium", "notez") {
+        if let Some(project_dirs) = ProjectDirs::from("com", "marschium", "NNNNotes") {
             project_dirs.data_dir().into()
         } else {
             ".".into()
@@ -93,6 +94,23 @@ impl SavedFiles {
     }
 }
 
+struct BackgroundState {
+    j: JoinHandle<()>
+}
+
+impl BackgroundState {
+    fn run(frame: epi::Frame) -> Self {
+        let j = std::thread::spawn(move || {
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                frame.request_repaint();
+            }
+        });
+        Self {
+            j
+        }
+    }
+}
 
 
 
@@ -101,7 +119,9 @@ struct MyEguiApp {
     buffer_id: BufferId,
     buffer: String,
     available_buffers: Vec<BufferId>,
-    saved_files: SavedFiles
+    saved_files: SavedFiles,
+    last_saved: Option<chrono::DateTime<Local>>,
+    background_state: Option<BackgroundState>
 }
 
 impl MyEguiApp {
@@ -173,6 +193,23 @@ impl epi::App for MyEguiApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
+        if self.background_state.is_none() {
+            self.background_state = Some(BackgroundState::run(frame.clone()));
+        }
+
+        match self.last_saved {
+            Some(v) => {
+                if Local::now() - v > chrono::Duration::seconds(5) {
+                    self.last_saved = Some(Local::now());
+                    let _ = self.saved_files.save(&self.buffer_id, &self.buffer);                    
+                }
+            },
+            None => {
+                self.last_saved = Some(Local::now());
+                let _ = self.saved_files.save(&self.buffer_id, &self.buffer);
+            }
+        }
+
         let command_key_down = ctx.input().modifiers.command;
         if command_key_down && ctx.input().key_pressed(Key::T) {
             self.swap_to_buffer(&BufferId::today());
@@ -211,7 +248,7 @@ impl epi::App for MyEguiApp {
 
 fn main() {
     let app = MyEguiApp::load();
-    // TODO load the current date entry if exists. create new one if not
     let native_options = eframe::NativeOptions::default();
+    // TODO start thread for autosave and updating the tree
     eframe::run_native(Box::new(app), native_options);
 }

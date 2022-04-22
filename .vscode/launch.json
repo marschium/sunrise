@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'notez'",
+            "name": "Debug executable 'NNNNotes'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=notez",
-                    "--package=notez"
+                    "--bin=NNNNotes",
+                    "--package=NNNNotes"
                 ],
                 "filter": {
-                    "name": "notez",
+                    "name": "NNNNotes",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'notez'",
+            "name": "Debug unit tests in executable 'NNNNotes'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=notez",
-                    "--package=notez"
+                    "--bin=NNNNotes",
+                    "--package=NNNNotes"
                 ],
                 "filter": {
-                    "name": "notez",
+                    "name": "NNNNotes",
                     "kind": "bin"
                 }
             },

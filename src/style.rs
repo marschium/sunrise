@@ -1,5 +1,6 @@
 use eframe::{epaint::{text::{LayoutJob, LayoutSection}, Color32, FontFamily, FontId}, egui::TextFormat};
 
+// https://stackoverflow.com/questions/40455997/iterate-over-lines-in-a-string-including-the-newline-characters
 pub struct LinesWithEndings<'a> {
     input: &'a str,
 }
@@ -52,10 +53,13 @@ pub fn highlight(text: &str) -> LayoutJob {
 
         let trimmed = line.trim();
         if trimmed.starts_with("[/]") {
-            format.color = Color32::GREEN;
+            format.color = Color32::DARK_GREEN;
         }
         else if trimmed.starts_with("[x]") {
-            format.color = Color32::RED;
+            format.color = Color32::DARK_RED;
+        }
+        else if trimmed.starts_with("#") {
+            format.font_id = FontId::new(18.0, FontFamily::Proportional);
         }
         job.sections.push(LayoutSection {
             byte_range: as_byte_range(text, line),

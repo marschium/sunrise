@@ -9,7 +9,7 @@ use std::{
 use chrono::{Date, DateTime, Datelike, Local, LocalResult, NaiveDate, TimeZone, Duration};
 use directories::ProjectDirs;
 use eframe::{
-    egui::{self, TextEdit},
+    egui::{self, TextEdit, Key},
     epi,
 };
 use walkdir::WalkDir;
@@ -173,6 +173,14 @@ impl epi::App for MyEguiApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
+        let command_key_down = ctx.input().modifiers.command;
+        if command_key_down && ctx.input().key_pressed(Key::T) {
+            self.swap_to_buffer(&BufferId::today());
+        }
+        if command_key_down && ctx.input().key_pressed(Key::S) {
+            let _ =  self.saved_files.save(&self.buffer_id, &self.buffer);
+        }
+
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.centered_and_justified(|ui| {
                 ui.label(self.buffer_id.filepath().to_str().unwrap_or("???"));
@@ -187,18 +195,6 @@ impl epi::App for MyEguiApp {
         });
         egui::CentralPanel::default().show(ctx, |ui| {
             // TODO autosave
-            // TODO make these hotkeys
-            // ui.horizontal(|ui| {
-            //     if ui.button("Save").clicked() {
-            //         let _ = self.save_buffer(); // TODO show error
-            //     }
-            //     if ui.button("Load").clicked() {
-            //         let _ = self.load_buffer(); // TODO show error
-            //     }
-            //     if ui.button("Today").clicked() {
-            //         self.swap_to_buffer(&BufferId::today())
-            //     }
-            // });
 
             let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
                 let mut layout_job: egui::text::LayoutJob = style::highlight(string);

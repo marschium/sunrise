@@ -10,9 +10,8 @@ use std::thread::JoinHandle;
 use chrono::{Date, Local, LocalResult, TimeZone, Datelike};
 use directories::ProjectDirs;
 use eframe::{
-    egui::{self, TextEdit, Key}, epi,
+    egui::{self, TextEdit, Key, Event, Layout, text_edit::CursorRange}, epi,
 };
-use eframe::epi::App;
 use walkdir::WalkDir;
 
 #[derive(Copy, Clone, Debug)]
@@ -129,7 +128,8 @@ struct MyEguiApp {
     available_buffers: Vec<BufferId>,
     saved_files: SavedFiles,
     last_saved: Option<chrono::DateTime<Local>>,
-    background_state: Option<BackgroundState>
+    background_state: Option<BackgroundState>,
+    cursor: Option<CursorRange>
 }
 
 impl MyEguiApp {
@@ -191,6 +191,32 @@ impl MyEguiApp {
         let _ = self.saved_files.save(&self.buffer_id, &self.buffer);
         self.buffer_id = *id;
         let _ = self.saved_files.load(&self.buffer_id, &mut self.buffer);
+    }    
+
+    // replace first occurance of 'find' on the current line
+    fn replace_on_current_line(&mut self, start_pos: usize, find: &str, replace: &str) -> bool {
+        let substr = self.buffer.get(0..start_pos).unwrap();
+        let search_start = substr.rfind("\n").unwrap();
+        let substr = self.buffer.get(search_start..start_pos).unwrap();
+        match substr.rfind(find) {
+            Some(i) => {
+                self.buffer.replace_range(i + search_start..i + search_start + find.len(), replace);
+                true
+            },
+            None => {
+                false
+            }
+        }
+    }
+
+    fn replace_task_for_cursor(&mut self, cursor_pos: usize) {
+        let mut changed = self.replace_on_current_line(cursor_pos, "[x]", "[/]");
+        if !changed {
+            changed = self.replace_on_current_line(cursor_pos, "[/]", "[x]");
+        }
+        if !changed {
+            changed = self.replace_on_current_line(cursor_pos, "[]", "[/]");
+        }
     }
 }
 
@@ -217,12 +243,33 @@ impl epi::App for MyEguiApp {
             }
         }
 
-        let command_key_down = ctx.input().modifiers.command;
-        if command_key_down && ctx.input().key_pressed(Key::T) {
-            self.swap_to_buffer(&BufferId::today());
-        }
-        if command_key_down && ctx.input().key_pressed(Key::S) {
-            let _ =  self.saved_files.save(&self.buffer_id, &self.buffer);
+        for event in ctx.input().events.clone() {
+            match event {
+                Event::Key {
+                    key: Key::Space,
+                    pressed: true,
+                    modifiers
+                } => {
+                    if modifiers.command {
+                        match self.cursor {
+                            Some(cursor) => {
+                                self.replace_task_for_cursor(cursor.primary.ccursor.index);
+                            },
+                            None => {}
+                        }
+                    }                    
+                },
+                Event::Key {
+                    key: Key::T,
+                    pressed: true,
+                    modifiers
+                } => {
+                    if modifiers.command {
+                        self.swap_to_buffer(&BufferId::today());
+                    }
+                }
+                _ => {}
+            }
         }
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
@@ -241,16 +288,19 @@ impl epi::App for MyEguiApp {
                 }
             }
         });
+
         egui::CentralPanel::default().show(ctx, |ui| {
             let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
                 let mut layout_job: egui::text::LayoutJob = style::highlight(string);
                 layout_job.wrap_width = wrap_width;
                 ui.fonts().layout_job(layout_job)
             };
-            ui.add_sized(
-                ui.available_size(),
-                TextEdit::multiline(&mut self.buffer).layouter(&mut layouter),
-            );
+
+            let layout = Layout::centered_and_justified(ui.layout().main_dir());
+            ui.allocate_ui_with_layout(ui.available_size(), layout, |ui| {
+                let output = TextEdit::multiline(&mut self.buffer).layouter(&mut layouter).show(ui);
+                self.cursor = output.cursor_range;
+            });
         });
     }
 }

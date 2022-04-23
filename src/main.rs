@@ -112,6 +112,14 @@ impl BackgroundState {
     }
 }
 
+fn format_duration(duration: &chrono::Duration) -> String {
+    if duration < &chrono::Duration::seconds(60) {
+        format!("{}s", duration.num_seconds())
+    }
+    else {
+        "a long time".to_owned()
+    }
+}
 
 
 #[derive(Default)]
@@ -127,7 +135,6 @@ struct MyEguiApp {
 impl MyEguiApp {
     pub fn load() -> Self {
         let mut s = Self::default();
-        // TODO if todays buffer isn't on the disk. load yesterdays and set the content
         let copy_from_yesterday = !s.saved_files.has(&BufferId::today());
         if copy_from_yesterday {
             let _ = s.saved_files.load(&BufferId::yesterday(), &mut s.buffer);
@@ -219,6 +226,10 @@ impl epi::App for MyEguiApp {
         }
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
+            if let Some(last_saved) = self.last_saved {
+                let time_since_last_save = Local::now() - last_saved;
+                ui.label(format!("Last Save: {} ago" , format_duration(&time_since_last_save)));
+            }
             ui.centered_and_justified(|ui| {
                 ui.label(self.buffer_id.filepath().to_str().unwrap_or("???"));
             });            
@@ -231,8 +242,6 @@ impl epi::App for MyEguiApp {
             }
         });
         egui::CentralPanel::default().show(ctx, |ui| {
-            // TODO autosave
-
             let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
                 let mut layout_job: egui::text::LayoutJob = style::highlight(string);
                 layout_job.wrap_width = wrap_width;

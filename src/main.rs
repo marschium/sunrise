@@ -1,4 +1,5 @@
 mod style;
+mod note_tree;
 
 use std::{
     fs::File,
@@ -12,10 +13,11 @@ use directories::ProjectDirs;
 use eframe::{
     egui::{self, TextEdit, Key, Event, Layout, text_edit::CursorRange}, epi,
 };
+use note_tree::show_note_tree;
 use walkdir::WalkDir;
 
-#[derive(Copy, Clone, Debug)]
-enum BufferId {
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum BufferId {
     Date(Date<Local>),
 }
 
@@ -53,7 +55,7 @@ struct SavedFiles {}
 impl SavedFiles {
 
     fn root_dir(&self) -> PathBuf {
-        if let Some(project_dirs) = ProjectDirs::from("com", "marschium", "NNNNotes") {
+        if let Some(project_dirs) = ProjectDirs::from("com", "marschium", "AirhornNotes") {
             project_dirs.data_dir().into()
         } else {
             ".".into()
@@ -115,6 +117,9 @@ fn format_duration(duration: &chrono::Duration) -> String {
     if duration < &chrono::Duration::seconds(60) {
         format!("{}s", duration.num_seconds())
     }
+    else if duration < &chrono::Duration::minutes(60) {
+        format!("{}m", duration.num_minutes())
+    }
     else {
         "a long time".to_owned()
     }
@@ -145,6 +150,7 @@ impl MyEguiApp {
         }
 
         s.update_available_buffers();
+        s.last_saved = Some(Local::now());
         s
     }
 
@@ -217,22 +223,28 @@ impl MyEguiApp {
         if !changed {
             changed = self.replace_on_current_line(cursor_pos, "[]", "[/]");
         }
+        if !changed {
+            let substr = self.buffer.get(0..cursor_pos).unwrap();
+            let end_of_prev_line = substr.rfind("\n").unwrap();
+            self.buffer.insert_str(end_of_prev_line + 1, "[] ");
+        }
     }
 }
 
 impl epi::App for MyEguiApp {
     fn name(&self) -> &str {
-        "My egui App"
+        "Airhorn Notes"
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
+        ctx.set_visuals(egui::Visuals::dark());
         if self.background_state.is_none() {
             self.background_state = Some(BackgroundState::run(frame.clone()));
         }
 
         match self.last_saved {
             Some(v) => {
-                if Local::now() - v > chrono::Duration::seconds(5) {
+                if Local::now() - v > chrono::Duration::minutes(10) {
                     self.last_saved = Some(Local::now());
                     let _ = self.saved_files.save(&self.buffer_id, &self.buffer);                    
                 }
@@ -268,6 +280,16 @@ impl epi::App for MyEguiApp {
                         self.swap_to_buffer(&BufferId::today());
                     }
                 }
+                Event::Key {
+                    key: Key::S,
+                    pressed: true,
+                    modifiers
+                } => {
+                    if modifiers.command {
+                        self.last_saved = Some(Local::now());
+                        let _ = self.saved_files.save(&self.buffer_id, &self.buffer);
+                    }
+                }
                 _ => {}
             }
         }
@@ -282,10 +304,8 @@ impl epi::App for MyEguiApp {
             });            
         });
         egui::SidePanel::left("buffers").show(ctx, |ui| {
-            for id in self.available_buffers.clone() {
-                if ui.button(id.filepath().to_str().unwrap()).clicked() {
-                    self.swap_to_buffer(&id)
-                }
+            if let Some(buffer_id) = show_note_tree(&self.available_buffers, ui) {
+                self.swap_to_buffer(&buffer_id);
             }
         });
 
@@ -308,6 +328,5 @@ impl epi::App for MyEguiApp {
 fn main() {
     let app = MyEguiApp::load();
     let native_options = eframe::NativeOptions::default();
-    // TODO start thread for autosave and updating the tree
     eframe::run_native(Box::new(app), native_options);
 }

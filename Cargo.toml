@@ -1,5 +1,5 @@
 [package]
-name = "NNNNotes"
+name = "AirhornNotes"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,3 +10,4 @@ chrono = "0.4.19"
 eframe = "0.17.0"
 walkdir = "2"
 directories = "4.0.1"
+itertools = "0.10.2"

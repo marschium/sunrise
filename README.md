@@ -1,5 +1,26 @@
 [![CC BY-SA 4.0][cc-by-sa-shield]][cc-by-sa]
 
+# 📝 Airhorn Notes 📝
+
+## Daily note taking.
+
+![example](img/example.png)
+
+There are many note taking solutions but this one is my own.
+
+Each day the previous day's notes are copied into todays entry.
+
+Add tasks and mark them as completed or cancelled.
+
+## Shortcuts
+|          |                      |
+|----------|----------------------|
+|`Ctrl + Space`| Convert line to task / Toggle task status |
+|`Ctrl + T`| Jump to today's entry|
+|`Ctrl + S`| Save                 |
+
+
+
 This work is licensed under a
 [Creative Commons Attribution-ShareAlike 4.0 International License][cc-by-sa].
 

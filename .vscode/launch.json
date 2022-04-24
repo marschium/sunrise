@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'NNNNotes'",
+            "name": "Debug executable 'AirhornNotes'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=NNNNotes",
-                    "--package=NNNNotes"
+                    "--bin=AirhornNotes",
+                    "--package=AirhornNotes"
                 ],
                 "filter": {
-                    "name": "NNNNotes",
+                    "name": "AirhornNotes",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'NNNNotes'",
+            "name": "Debug unit tests in executable 'AirhornNotes'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=NNNNotes",
-                    "--package=NNNNotes"
+                    "--bin=AirhornNotes",
+                    "--package=AirhornNotes"
                 ],
                 "filter": {
-                    "name": "NNNNotes",
+                    "name": "AirhornNotes",
                     "kind": "bin"
                 }
             },

@@ -53,10 +53,10 @@ pub fn highlight(text: &str) -> LayoutJob {
 
         let trimmed = line.trim();
         if trimmed.starts_with("[/]") {
-            format.color = Color32::DARK_GREEN;
+            format.color = Color32::GREEN;
         }
         else if trimmed.starts_with("[x]") {
-            format.color = Color32::DARK_RED;
+            format.color = Color32::RED;
         }
         else if trimmed.starts_with("#") {
             format.font_id = FontId::new(18.0, FontFamily::Proportional);

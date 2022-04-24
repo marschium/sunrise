@@ -295,13 +295,15 @@ impl epi::App for MyEguiApp {
         }
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
-            if let Some(last_saved) = self.last_saved {
-                let time_since_last_save = Local::now() - last_saved;
-                ui.label(format!("Last Save: {} ago" , format_duration(&time_since_last_save)));
-            }
-            ui.centered_and_justified(|ui| {
-                ui.label(self.buffer_id.filepath().to_str().unwrap_or("???"));
-            });            
+            ui.horizontal(|ui| {
+                if let Some(last_saved) = self.last_saved {
+                    let time_since_last_save = Local::now() - last_saved;
+                    ui.label(format!("Last Save: {} ago" , format_duration(&time_since_last_save)));
+                }
+                ui.centered_and_justified(|ui| {
+                    ui.label(self.buffer_id.filepath().to_str().unwrap_or("???"));
+                });  
+            });                      
         });
         egui::SidePanel::left("buffers").show(ctx, |ui| {
             if let Some(buffer_id) = show_note_tree(&self.available_buffers, ui) {

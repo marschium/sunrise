@@ -1,4 +1,4 @@
-use eframe::{epaint::{text::{LayoutJob, LayoutSection}, Color32, FontFamily, FontId}, egui::TextFormat};
+use eframe::{epaint::{text::{LayoutJob, LayoutSection}, Color32, FontFamily, FontId, Stroke}, egui::TextFormat};
 
 // https://stackoverflow.com/questions/40455997/iterate-over-lines-in-a-string-including-the-newline-characters
 pub struct LinesWithEndings<'a> {
@@ -57,6 +57,7 @@ pub fn highlight(text: &str) -> LayoutJob {
         }
         else if trimmed.starts_with("[x]") {
             format.color = Color32::RED;
+            format.strikethrough = Stroke::new(2.0, Color32::RED)
         }
         else if trimmed.starts_with("#") {
             format.font_id = FontId::new(18.0, FontFamily::Proportional);

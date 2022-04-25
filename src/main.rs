@@ -202,7 +202,7 @@ impl MyEguiApp {
     // replace first occurance of 'find' on the current line
     fn replace_on_current_line(&mut self, start_pos: usize, find: &str, replace: &str) -> bool {
         let substr = self.buffer.get(0..start_pos).unwrap();
-        let search_start = substr.rfind("\n").unwrap();
+        let search_start = substr.rfind("\n").unwrap_or(0);
         let substr = self.buffer.get(search_start..start_pos).unwrap();
         match substr.rfind(find) {
             Some(i) => {
@@ -221,12 +221,15 @@ impl MyEguiApp {
             changed = self.replace_on_current_line(cursor_pos, "[/]", "[x]");
         }
         if !changed {
-            changed = self.replace_on_current_line(cursor_pos, "[]", "[/]");
+            changed = self.replace_on_current_line(cursor_pos, "[]", "[ ]");
+        }
+        if !changed {
+            changed = self.replace_on_current_line(cursor_pos, "[ ]", "[/]");
         }
         if !changed {
             let substr = self.buffer.get(0..cursor_pos).unwrap();
-            let end_of_prev_line = substr.rfind("\n").unwrap();
-            self.buffer.insert_str(end_of_prev_line + 1, "[] ");
+            let end_of_prev_line = substr.rfind("\n").unwrap_or(0);
+            self.buffer.insert_str(if end_of_prev_line > 0 {end_of_prev_line + 1 } else { 0 }, "[ ] ");
         }
     }
 }
@@ -258,7 +261,7 @@ impl epi::App for MyEguiApp {
         for event in ctx.input().events.clone() {
             match event {
                 Event::Key {
-                    key: Key::Space,
+                    key: Key::M,
                     pressed: true,
                     modifiers
                 } => {

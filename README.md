@@ -15,7 +15,7 @@ Add tasks and mark them as completed or cancelled.
 ## Shortcuts
 |          |                      |
 |----------|----------------------|
-|`Ctrl + Space`| Convert line to task / Toggle task status |
+|`Ctrl + M`| Convert line to task / Toggle task status |
 |`Ctrl + T`| Jump to today's entry|
 |`Ctrl + S`| Save                 |
 

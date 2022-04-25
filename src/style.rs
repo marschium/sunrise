@@ -47,17 +47,20 @@ pub fn highlight(text: &str) -> LayoutJob {
     for line in LinesWithEndings::from(text) {
         let mut format = TextFormat {
             font_id: FontId::new(14.0, FontFamily::Proportional),
-            color: Color32::DARK_GRAY,
+            color: Color32::LIGHT_GRAY,
             ..Default::default()
         };
 
         let trimmed = line.trim();
         if trimmed.starts_with("[/]") {
-            format.color = Color32::GREEN;
+            format.color = Color32::DARK_GREEN;
+        }
+        else if trimmed.starts_with("[ ]") {
+            format.color = Color32::WHITE;
         }
         else if trimmed.starts_with("[x]") {
-            format.color = Color32::RED;
-            format.strikethrough = Stroke::new(2.0, Color32::RED)
+            format.color = Color32::DARK_RED;
+            format.strikethrough = Stroke::new(1.0, Color32::RED)
         }
         else if trimmed.starts_with("#") {
             format.font_id = FontId::new(18.0, FontFamily::Proportional);

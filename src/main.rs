@@ -323,8 +323,10 @@ impl epi::App for MyEguiApp {
 
             let layout = Layout::centered_and_justified(ui.layout().main_dir());
             ui.allocate_ui_with_layout(ui.available_size(), layout, |ui| {
-                let output = TextEdit::multiline(&mut self.buffer).layouter(&mut layouter).show(ui);
-                self.cursor = output.cursor_range;
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    let output = TextEdit::multiline(&mut self.buffer).layouter(&mut layouter).lock_focus(true).show(ui);
+                    self.cursor = output.cursor_range;
+                });                
             });
         });
     }

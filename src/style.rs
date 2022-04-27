@@ -60,7 +60,6 @@ pub fn highlight(text: &str) -> LayoutJob {
         }
         else if trimmed.starts_with("[x]") {
             format.color = Color32::DARK_RED;
-            format.strikethrough = Stroke::new(1.0, Color32::RED)
         }
         else if trimmed.starts_with("#") {
             format.font_id = FontId::new(18.0, FontFamily::Proportional);

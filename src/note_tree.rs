@@ -1,3 +1,5 @@
+use std::{io::BufRead, cmp::Ordering};
+
 use chrono::{Datelike, Month};
 use eframe::egui::{Widget, self};
 use itertools::Itertools;
@@ -41,7 +43,13 @@ pub fn show_note_tree(buffers: &Vec::<BufferId>, ui: &mut egui::Ui) -> Option<Bu
             for (month, group) in &by_month {
                 let month_name = month_to_name(month);
                 ui.collapsing(month_name, |ui| {
-                    for d in group {
+                    for d in group.sorted_by(|a, b| {
+                         match (a, b) {
+                            (BufferId::Date(a), BufferId::Date(b)) => {
+                                Ord::cmp(a, b)
+                            }
+                        }
+                    }) {
                         let name = match d {
                             BufferId::Date(date) => date.day().to_string()
                         };

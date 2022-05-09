@@ -8,7 +8,7 @@ use std::{
 };
 use std::thread::JoinHandle;
 
-use chrono::{Date, Local, LocalResult, TimeZone, Datelike};
+use chrono::{Date, Local, LocalResult, TimeZone, Datelike, Weekday};
 use directories::ProjectDirs;
 use eframe::{
     egui::{self, TextEdit, Key, Event, Layout, text_edit::CursorRange}, epi,
@@ -17,35 +17,42 @@ use note_tree::show_note_tree;
 use walkdir::WalkDir;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum BufferId {
-    Date(Date<Local>),
+pub struct BufferId {
+    date: Date<Local>,
 }
 
 impl Default for BufferId {
     fn default() -> Self {
-        Self::Date(Local::now().date())
+        Self{date: Local::now().date()}
     }
 }
 
 impl BufferId {
+    fn new(date: Date<Local>) -> Self {
+        Self {
+            date
+        }
+    }
+
     fn today() -> Self {
         BufferId::default()
     }
 
     fn yesterday() -> Self {
-        Self::Date(Local::now().date().sub(chrono::Duration::days(1)))
+        Self{ date: Local::now().date().sub(chrono::Duration::days(1)) } 
+    }
+
+    fn prev(&self) -> Self {
+        Self{ date: self.date.sub(chrono::Duration::days(1)) }
     }
 
     fn filepath(&self) -> PathBuf {
-        match self {
-            Self::Date(dt) => {
-                let mut path = PathBuf::new();
-                path.push(dt.year().to_string());
-                path.push(dt.month().to_string());
-                path.push(dt.day().to_string());
-                path
-            }
-        }
+        let dt = self.date;
+        let mut path = PathBuf::new();
+        path.push(dt.year().to_string());
+        path.push(dt.month().to_string());
+        path.push(dt.day().to_string());
+        path
     }
 }
 
@@ -140,10 +147,19 @@ struct MyEguiApp {
 impl MyEguiApp {
     pub fn load() -> Self {
         let mut s = Self::default();
-        let copy_from_yesterday = !s.saved_files.has(&BufferId::today());
-        if copy_from_yesterday {
-            let _ = s.saved_files.load(&BufferId::yesterday(), &mut s.buffer);
-            let _ = s.saved_files.save(&BufferId::today(), &s.buffer);
+        let copy_from_previous = !s.saved_files.has(&BufferId::today());
+        if copy_from_previous {
+            let mut id = BufferId::yesterday();
+            let mut i = 0;
+            while !s.saved_files.has(&id) && i < 14{
+                id = id.prev();
+                i += 1;
+            }
+
+            if s.saved_files.has(&id) {
+                let _ = s.saved_files.load(&id, &mut s.buffer);
+                let _ = s.saved_files.save(&BufferId::today(), &s.buffer);
+            }
         }
         else {
             let _ = s.saved_files.load(&BufferId::today(), &mut s.buffer);
@@ -180,7 +196,7 @@ impl MyEguiApp {
                         let d = Local.ymd_opt(year, month, day);
                         match d {
                             LocalResult::Single(d) => {
-                                self.available_buffers.push(BufferId::Date(d));
+                                self.available_buffers.push(BufferId::new(d));
                             }
                             _ => {}
                         }

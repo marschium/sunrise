@@ -8,10 +8,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  build_linux:
     runs-on: ubuntu-latest
-
     steps:
     - run: sudo apt install libxcb-shape0-dev libxcb-xfixes0-dev
     - uses: actions/checkout@v3
@@ -21,3 +19,14 @@ jobs:
       with:
         name: AirhornNotes.x86_64
         path: target/release/AirhornNotes
+        
+  build_windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --release
+    - uses: actions/upload-artifact@v3
+      with:
+        name: AirhornNotes.exe
+        path: target/release/AirhornNotes.exe

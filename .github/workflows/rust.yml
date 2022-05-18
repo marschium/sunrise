@@ -19,12 +19,6 @@ jobs:
       with:
         name: AirhornNotes.x86_64
         path: target/release/AirhornNotes
-    - uses: ncipollo/release-action@v1
-      with:
-        artifacts: "*.x86_64"
-        tag: "0.0.1"
-        commit: "master"
-        token: ${{ secrets.GITHUB_TOKEN }}
         
   build_windows:
     runs-on: windows-latest
@@ -36,3 +30,17 @@ jobs:
       with:
         name: AirhornNotes.exe
         path: target/release/AirhornNotes.exe
+        
+  release:
+    runs-on: ubuntu-latest
+    needs: 
+      - build_windows
+      - build_linux
+    steps:
+    - uses: ncipollo/release-action@v1
+      with:
+        artifacts: "*.x86_64"
+        tag: "0.0.1"
+        commit: "master"
+        token: ${{ secrets.GITHUB_TOKEN }}
+

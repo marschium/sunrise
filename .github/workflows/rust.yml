@@ -22,6 +22,8 @@ jobs:
     - uses: ncipollo/release-action@v1
       with:
         artifacts: "*.x86_64"
+        tag: "0.0.1"
+        commit: "master"
         token: ${{ secrets.GITHUB_TOKEN }}
         
   build_windows:

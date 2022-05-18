@@ -40,7 +40,7 @@ jobs:
     - uses: paulhatch/semantic-version@v4.0.2
       name: version
       with:
-        tag_prefix: ""
+        tag_prefix: "v"
         major_pattern: "(MAJOR)"
         minor_pattern: "(MINOR)"
         format: "${major}.${minor}.${patch}"

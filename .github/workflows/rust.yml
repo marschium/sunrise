@@ -19,6 +19,10 @@ jobs:
       with:
         name: AirhornNotes.x86_64
         path: target/release/AirhornNotes
+    - uses: ncipollo/release-action@v1
+      with:
+        artifacts: "*.x86_64"
+        token: ${{ secrets.GITHUB_TOKEN }}
         
   build_windows:
     runs-on: windows-latest

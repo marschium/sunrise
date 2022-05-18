@@ -37,10 +37,13 @@ jobs:
       - build_windows
       - build_linux
     steps:
+    - uses: actions/download-artifact@v3
+      with:
+        path: artifacts
     - uses: ncipollo/release-action@v1
       with:
-        artifacts: "*.x86_64"
-        tag: "0.0.1"
+        artifacts: "artifacts/*"
+        tag: "0.0.2"
         commit: "master"
         token: ${{ secrets.GITHUB_TOKEN }}
 

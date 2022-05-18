@@ -42,8 +42,8 @@ jobs:
         path: artifacts
     - uses: ncipollo/release-action@v1
       with:
-        artifacts: "artifacts/AirhornNotes.exe/AirhornNotes.exe,artifacts/AirhornNotes.x86_64/AirhornNotes.x86_64"
-        tag: "0.0.3"
+        artifacts: "artifacts/AirhornNotes.exe/AirhornNotes.exe,artifacts/AirhornNotes.x86_64/AirhornNotes"
+        tag: "0.0.4"
         commit: "master"
         token: ${{ secrets.GITHUB_TOKEN }}
 

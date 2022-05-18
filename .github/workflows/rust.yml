@@ -37,13 +37,20 @@ jobs:
       - build_windows
       - build_linux
     steps:
+    - uses: paulhatch/semantic-version@v4.0.2
+      name: version
+      with:
+        major_pattern: "(MAJOR)"
+        minor_pattern: "(MINOR)"
+        format: "${major}.${minor}.${patch}"
+        bump_each_commit: true
     - uses: actions/download-artifact@v3
       with:
         path: artifacts
     - uses: ncipollo/release-action@v1
       with:
         artifacts: "artifacts/AirhornNotes.exe/AirhornNotes.exe,artifacts/AirhornNotes.x86_64/AirhornNotes"
-        tag: "0.0.4"
+        tag: ${{ steps.version.outputs.version }}
         commit: "master"
         token: ${{ secrets.GITHUB_TOKEN }}
 

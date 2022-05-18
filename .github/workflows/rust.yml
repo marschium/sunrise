@@ -45,6 +45,7 @@ jobs:
         minor_pattern: "(MINOR)"
         format: "${major}.${minor}.${patch}"
         bump_each_commit: true
+    - run: echo ${{ steps.version.outputs.* }}
     - uses: actions/download-artifact@v3
       with:
         path: artifacts

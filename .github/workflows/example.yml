@@ -10,8 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:    
     - uses: actions/checkout@v3
-    - run: "ls -lhR ${GITHUB_WORKSPACE}"
-    - run: chmod +x "${GITHUB_WORKSPACE}/create_example.sh"
+    - run: sudo apt install scrot
+    - run: chmod +x "${GITHUB_WORKSPACE}/create_example.sh"    
+    - name: Build
+      run: cargo build --debug
     - name: Update example
       run: "${GITHUB_WORKSPACE}/create_example.sh"
       working-directory: .

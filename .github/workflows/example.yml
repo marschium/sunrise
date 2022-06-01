@@ -1,0 +1,17 @@
+# This is a basic workflow that is manually triggered
+
+name: Update example
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Update example
+      run: ./create_example.sh
+    - uses: EndBug/add-and-commit@v9
+      with:
+        add: 'img/example.png'
+        message: 'update example'

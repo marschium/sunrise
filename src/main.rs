@@ -4,7 +4,7 @@ mod note_tree;
 use std::{
     fs::File,
     io::{Read, Write},
-    path::PathBuf, ops::Sub,
+    path::PathBuf, ops::Sub, env,
 };
 use std::thread::JoinHandle;
 
@@ -145,7 +145,7 @@ struct MyEguiApp {
 }
 
 impl MyEguiApp {
-    pub fn load() -> Self {
+    pub fn load(demo: bool) -> Self {
         let mut s = Self::default();
         let copy_from_previous = !s.saved_files.has(&BufferId::today());
         if copy_from_previous {
@@ -167,6 +167,14 @@ impl MyEguiApp {
 
         s.update_available_buffers();
         s.last_saved = Some(Local::now());
+        if demo {
+            s.buffer = r"# Header
+[ ] Something todo
+[/] Something done
+[x] Something cancelled
+`monospaced something`
+regular text".to_string();
+        }
         s
     }
 
@@ -349,7 +357,8 @@ impl epi::App for MyEguiApp {
 }
 
 fn main() {
-    let app = MyEguiApp::load();
+    let args : Vec<_> = env::args().collect();
+    let app = MyEguiApp::load(args.get(1) == Some(&"--demo".to_string()));
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(Box::new(app), native_options);
 }

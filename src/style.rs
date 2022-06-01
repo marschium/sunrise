@@ -34,14 +34,14 @@ fn header(s: &str) -> IResult<&str, Style> {
 }
 
 fn todo_task(s: &str) -> IResult<&str, Style> {
-    let mut inner = tuple((space0, tag("[]"), not_line_ending, newline));
+    let mut inner = tuple((space0, tag("[ ]"), not_line_ending, newline));
     let (extra, span) = inner(s)?;
     Ok((
         extra,
         Style {
             look: TextFormat {
                 font_id: FontId::new(14.0, FontFamily::Proportional),
-                color: Color32::LIGHT_GRAY,
+                color: Color32::WHITE,
                 ..Default::default()
             },
             len: span.0.len() + span.1.len() + span.2.len() + 1,

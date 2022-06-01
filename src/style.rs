@@ -1,74 +1,171 @@
-use eframe::{epaint::{text::{LayoutJob, LayoutSection}, Color32, FontFamily, FontId, Stroke}, egui::TextFormat};
+use eframe::{
+    egui::TextFormat,
+    epaint::{
+        text::{LayoutJob, LayoutSection},
+        Color32, FontFamily, FontId,
+    },
+};
+use nom::{
+    bytes::complete::{tag, take_until},
+    character::complete::{newline, not_line_ending, space0, alphanumeric1},
+    sequence::{terminated, tuple, delimited},
+    IResult, branch::alt,
+};
 
-// https://stackoverflow.com/questions/40455997/iterate-over-lines-in-a-string-including-the-newline-characters
-pub struct LinesWithEndings<'a> {
-    input: &'a str,
+struct Style {
+    pub look: TextFormat,
+    pub len: usize,
 }
 
-impl<'a> LinesWithEndings<'a> {
-    pub fn from(input: &'a str) -> LinesWithEndings<'a> {
-        LinesWithEndings { input: input }
-    }
+fn header(s: &str) -> IResult<&str, Style> {
+    let mut inner = tuple((space0, tag("#"), not_line_ending, newline));
+    let (extra, span) = inner(s)?;
+    Ok((
+        extra,
+        Style {
+            look: TextFormat {
+                font_id: FontId::new(26.0, FontFamily::Proportional),
+                color: Color32::LIGHT_GRAY,
+                ..Default::default()
+            },
+            len: span.0.len() + span.1.len() + span.2.len() + 1,
+        },
+    ))
 }
 
-impl<'a> Iterator for LinesWithEndings<'a> {
-    type Item = &'a str;
+fn todo_task(s: &str) -> IResult<&str, Style> {
+    let mut inner = tuple((space0, tag("[]"), not_line_ending, newline));
+    let (extra, span) = inner(s)?;
+    Ok((
+        extra,
+        Style {
+            look: TextFormat {
+                font_id: FontId::new(14.0, FontFamily::Proportional),
+                color: Color32::LIGHT_GRAY,
+                ..Default::default()
+            },
+            len: span.0.len() + span.1.len() + span.2.len() + 1,
+        },
+    ))
+}
 
-    #[inline]
-    fn next(&mut self) -> Option<&'a str> {
-        if self.input.is_empty() {
-            return None;
+fn cancelled_task(s: &str) -> IResult<&str, Style> {
+    let mut inner = tuple((space0, tag("[x]"), not_line_ending, newline));
+    let (extra, span) = inner(s)?;
+    Ok((
+        extra,
+        Style {
+            look: TextFormat {
+                font_id: FontId::new(14.0, FontFamily::Proportional),
+                color: Color32::DARK_RED,
+                ..Default::default()
+            },
+            len: span.0.len() + span.1.len() + span.2.len() + 1,
+        },
+    ))
+}
+
+fn completed_task(s: &str) -> IResult<&str, Style> {
+    let mut inner = tuple((space0, tag("[/]"), not_line_ending, newline));
+    let (extra, span) = inner(s)?;
+    Ok((
+        extra,
+        Style {
+            look: TextFormat {
+                font_id: FontId::new(14.0, FontFamily::Proportional),
+                color: Color32::DARK_GREEN,
+                ..Default::default()
+            },
+            len: span.0.len() + span.1.len() + span.2.len() + 1,
+        },
+    ))
+}
+
+fn code(s: &str) -> IResult<&str, Style> {
+    let mut inner = delimited(tag("`"), take_until("`"), tag("`"));
+    let (extra, span) = inner(s)?;
+    Ok((
+        extra,
+        Style {
+            look: TextFormat {
+                font_id: FontId::new(14.0, FontFamily::Monospace),
+                color: Color32::LIGHT_GRAY,
+                background: Color32::DARK_GRAY,
+                ..Default::default()
+            },
+            len: span.len() + 2,
+        },
+    ))
+}
+
+fn style(s: &str) -> IResult<&str, Style> {
+    let (extra, style) = alt((header, todo_task, completed_task, cancelled_task, code))(s)?;
+    Ok((extra, style))
+}
+
+fn parse(input: &str) -> IResult<&str, Vec<Style>> {
+    let mut output = Vec::new();
+    let mut current_input = input;
+
+    while !current_input.is_empty() {
+        let mut at_least_one_style = false;
+        for (idx, _) in current_input.char_indices() {
+            match style(&current_input[idx..]) {
+                Ok((remaining, style)) => {
+                    let text_until_style = &current_input[0..idx];
+                    if !text_until_style.is_empty() {
+                        output.push(Style {
+                            look: TextFormat {
+                                font_id: FontId::new(14.0, FontFamily::Proportional),
+                                color: Color32::LIGHT_GRAY,
+                                ..Default::default()
+                            },
+                            len: text_until_style.len(),
+                        });
+                    }
+                    output.push(style);
+                    current_input = remaining;
+                    at_least_one_style = true;
+                    break;
+                }
+                Err(nom::Err::Error(_)) => { /* no matches */ }
+                Err(e) => return Err(e),
+            }
         }
-        let split = self
-            .input
-            .find('\n')
-            .map(|i| i + 1)
-            .unwrap_or(self.input.len());
-        let (line, rest) = self.input.split_at(split);
-        self.input = rest;
-        Some(line)
-    }
-}
 
-fn as_byte_range(whole: &str, range: &str) -> std::ops::Range<usize> {
-    let whole_start = whole.as_ptr() as usize;
-    let range_start = range.as_ptr() as usize;
-    assert!(whole_start <= range_start);
-    assert!(range_start + range.len() <= whole_start + whole.len());
-    let offset = range_start - whole_start;
-    offset..(offset + range.len())
+        if !at_least_one_style {
+            output.push(Style {
+                look: TextFormat {
+                    font_id: FontId::new(14.0, FontFamily::Proportional),
+                    color: Color32::LIGHT_GRAY,
+                    ..Default::default()
+                },
+                len: current_input.len(),
+            });
+            break;
+        }
+    }
+
+    Ok(("", output))
 }
 
 pub fn highlight(text: &str) -> LayoutJob {
-    // TODO nom here?
     let mut job = LayoutJob::default();
     job.text = text.into();
-    
-    for line in LinesWithEndings::from(text) {
-        let mut format = TextFormat {
-            font_id: FontId::new(14.0, FontFamily::Proportional),
-            color: Color32::LIGHT_GRAY,
-            ..Default::default()
-        };
 
-        let trimmed = line.trim();
-        if trimmed.starts_with("[/]") {
-            format.color = Color32::DARK_GREEN;
+    match parse(text) {
+        Ok((_, styles)) => {
+            let mut offset = 0;
+            for style in styles {
+                job.sections.push(LayoutSection {
+                    byte_range: offset..offset + style.len,
+                    leading_space: 0.0,
+                    format: style.look,
+                });
+                offset += style.len;
+            }
         }
-        else if trimmed.starts_with("[ ]") {
-            format.color = Color32::WHITE;
-        }
-        else if trimmed.starts_with("[x]") {
-            format.color = Color32::DARK_RED;
-        }
-        else if trimmed.starts_with("#") {
-            format.font_id = FontId::new(18.0, FontFamily::Proportional);
-        }
-        job.sections.push(LayoutSection {
-            byte_range: as_byte_range(text, line),
-            leading_space: 0.0,
-            format,
-        });
+        _ => {}
     }
 
     job

@@ -4,7 +4,6 @@ name: Update example
 on:
   push:
     branches: [ master ]
-
 jobs:
   example:
     runs-on: ubuntu-latest

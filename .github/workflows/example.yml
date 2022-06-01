@@ -9,6 +9,7 @@ jobs:
   example:
     runs-on: ubuntu-latest
     steps:
+    - run: "ls -lhR ${GITHUB_WORKSPACE}"
     - run: chmod +x "${GITHUB_WORKSPACE}/create_example.sh"
     - name: Update example
       run: "${GITHUB_WORKSPACE}/create_example.sh"

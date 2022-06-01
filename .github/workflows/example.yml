@@ -13,7 +13,7 @@ jobs:
     - run: sudo apt install scrot
     - run: chmod +x "${GITHUB_WORKSPACE}/create_example.sh"    
     - name: Build
-      run: cargo build --debug
+      run: cargo build
     - name: Update example
       run: "${GITHUB_WORKSPACE}/create_example.sh"
       working-directory: .

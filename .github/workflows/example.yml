@@ -9,8 +9,9 @@ jobs:
   example:
     runs-on: ubuntu-latest
     steps:
+    - run: chmod +x "${GITHUB_WORKSPACE}/create_example.sh"
     - name: Update example
-      run: ./create_example.sh
+      run: "${GITHUB_WORKSPACE}/create_example.sh"
       working-directory: .
     - uses: EndBug/add-and-commit@v9
       with:

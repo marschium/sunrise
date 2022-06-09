@@ -1,5 +1,5 @@
 use eframe::{
-    egui::TextFormat,
+    egui::{TextFormat, Layout},
     epaint::{
         text::{LayoutJob, LayoutSection},
         Color32, FontFamily, FontId,
@@ -7,8 +7,8 @@ use eframe::{
 };
 use nom::{
     bytes::complete::{tag, take_until},
-    character::complete::{newline, not_line_ending, space0, alphanumeric1},
-    sequence::{terminated, tuple, delimited},
+    character::complete::{newline, not_line_ending, space0},
+    sequence::{tuple, delimited},
     IResult, branch::alt,
 };
 
@@ -169,4 +169,22 @@ pub fn highlight(text: &str) -> LayoutJob {
     }
 
     job
+}
+
+#[derive(Default, Debug)]
+pub struct CachedLayoutJobBuilder {
+    cached: Option<LayoutJob>
+}
+
+impl CachedLayoutJobBuilder {
+    pub fn clear(&mut self) {
+        self.cached = None
+    }
+
+    pub fn highlight(&mut self, text: &str) -> LayoutJob {
+        if self.cached.is_none() {             
+            self.cached = Some(highlight(text));
+        }
+        self.cached.to_owned().unwrap()
+    }
 }

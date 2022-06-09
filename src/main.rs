@@ -4,7 +4,7 @@ mod note_tree;
 use std::{
     fs::File,
     io::{Read, Write},
-    path::PathBuf, ops::Sub, env, time::Duration,
+    path::PathBuf, ops::Sub, env,
 };
 use std::thread::JoinHandle;
 
@@ -14,6 +14,7 @@ use eframe::{
     egui::{self, TextEdit, Key, Event, Layout, text_edit::CursorRange}, epi,
 };
 use note_tree::show_note_tree;
+use style::CachedLayoutJobBuilder;
 use walkdir::WalkDir;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -142,7 +143,8 @@ struct MyEguiApp {
     last_saved: Option<chrono::DateTime<Local>>,
     background_state: Option<BackgroundState>,
     cursor: Option<CursorRange>,
-    last_changed: Option<chrono::DateTime<Local>>
+    last_changed: Option<chrono::DateTime<Local>>,
+    highlight_cache: CachedLayoutJobBuilder
 }
 
 impl MyEguiApp {
@@ -288,7 +290,11 @@ impl epi::App for MyEguiApp {
             }
         }
 
+        let mut any_key_pressed = false;
         for event in ctx.input().events.clone() {
+            if !any_key_pressed {
+                any_key_pressed = matches!(event, Event::Key { .. });
+            }
             match event {
                 Event::Key {
                     key: Key::M,
@@ -346,21 +352,27 @@ impl epi::App for MyEguiApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
-                let mut layout_job: egui::text::LayoutJob = style::highlight(string); // TODO memoize this
+                if any_key_pressed {
+                    self.highlight_cache.clear();
+                }
+                let mut layout_job = self.highlight_cache.highlight(string);
                 layout_job.wrap_width = wrap_width;
                 ui.fonts().layout_job(layout_job)
             };
 
+            let mut text_changed = false;
             let layout = Layout::centered_and_justified(ui.layout().main_dir());
             ui.allocate_ui_with_layout(ui.available_size(), layout, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let output = TextEdit::multiline(&mut self.buffer).layouter(&mut layouter).lock_focus(true).show(ui);
-                    if output.response.changed() {
-                        self.last_changed = Some(Local::now());
-                    }
+                    text_changed = output.response.changed();
                     self.cursor = output.cursor_range;
                 });                
             });
+
+            if text_changed {
+                self.last_changed = Some(Local::now());
+            }
         });
     }
 }

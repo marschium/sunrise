@@ -4,11 +4,11 @@ mod note_tree;
 use std::{
     fs::File,
     io::{Read, Write},
-    path::PathBuf, ops::Sub, env,
+    path::PathBuf, ops::Sub, env, time::Duration,
 };
 use std::thread::JoinHandle;
 
-use chrono::{Date, Local, LocalResult, TimeZone, Datelike, Weekday};
+use chrono::{Date, Local, LocalResult, TimeZone, Datelike};
 use directories::ProjectDirs;
 use eframe::{
     egui::{self, TextEdit, Key, Event, Layout, text_edit::CursorRange}, epi,
@@ -141,7 +141,8 @@ struct MyEguiApp {
     saved_files: SavedFiles,
     last_saved: Option<chrono::DateTime<Local>>,
     background_state: Option<BackgroundState>,
-    cursor: Option<CursorRange>
+    cursor: Option<CursorRange>,
+    last_changed: Option<chrono::DateTime<Local>>
 }
 
 impl MyEguiApp {
@@ -271,7 +272,12 @@ impl epi::App for MyEguiApp {
 
         match self.last_saved {
             Some(v) => {
-                if Local::now() - v > chrono::Duration::minutes(10) {
+                let save_time_elapsed = Local::now() - v > chrono::Duration::minutes(10);
+                let recent_edit = match self.last_changed {
+                    Some(last_changed) => (last_changed > v) && (Local::now() - last_changed > chrono::Duration::seconds(5)),
+                    _ => false
+                };
+                if save_time_elapsed || recent_edit {
                     self.last_saved = Some(Local::now());
                     let _ = self.saved_files.save(&self.buffer_id, &self.buffer);                    
                 }
@@ -340,7 +346,7 @@ impl epi::App for MyEguiApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
-                let mut layout_job: egui::text::LayoutJob = style::highlight(string);
+                let mut layout_job: egui::text::LayoutJob = style::highlight(string); // TODO memoize this
                 layout_job.wrap_width = wrap_width;
                 ui.fonts().layout_job(layout_job)
             };
@@ -349,6 +355,9 @@ impl epi::App for MyEguiApp {
             ui.allocate_ui_with_layout(ui.available_size(), layout, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     let output = TextEdit::multiline(&mut self.buffer).layouter(&mut layouter).lock_focus(true).show(ui);
+                    if output.response.changed() {
+                        self.last_changed = Some(Local::now());
+                    }
                     self.cursor = output.cursor_range;
                 });                
             });

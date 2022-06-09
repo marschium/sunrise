@@ -1,0 +1,22 @@
+# This is a basic workflow that is manually triggered
+
+name: Update example
+on:
+  push:
+    branches: [ master ]
+jobs:
+  example:
+    runs-on: ubuntu-latest
+    steps:    
+    - uses: actions/checkout@v3
+    - run: sudo apt install scrot libxcb-shape0-dev libxcb-xfixes0-dev xvfb
+    - run: chmod +x "${GITHUB_WORKSPACE}/create_example.sh"    
+    - name: Build
+      run: cargo build
+    - name: Update example
+      run: xvfb-run "${GITHUB_WORKSPACE}/create_example.sh"
+      working-directory: .
+    - uses: EndBug/add-and-commit@v9
+      with:
+        add: 'img/example.png'
+        message: 'update example'

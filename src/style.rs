@@ -1,5 +1,5 @@
 use eframe::{
-    egui::{TextFormat, Layout},
+    egui::{TextFormat},
     epaint::{
         text::{LayoutJob, LayoutSection},
         Color32, FontFamily, FontId,

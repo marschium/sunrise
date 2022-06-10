@@ -121,18 +121,6 @@ impl BackgroundState {
     }
 }
 
-fn format_duration(duration: &chrono::Duration) -> String {
-    if duration < &chrono::Duration::seconds(60) {
-        format!("{}s", duration.num_seconds())
-    }
-    else if duration < &chrono::Duration::minutes(60) {
-        format!("{}m", duration.num_minutes())
-    }
-    else {
-        "a long time".to_owned()
-    }
-}
-
 
 #[derive(Default)]
 struct MyEguiApp {
@@ -140,7 +128,7 @@ struct MyEguiApp {
     buffer: String,
     available_buffers: Vec<BufferId>,
     saved_files: SavedFiles,
-    last_saved: Option<chrono::DateTime<Local>>,
+    saved: bool,
     background_state: Option<BackgroundState>,
     cursor: Option<CursorRange>,
     last_changed: Option<chrono::DateTime<Local>>,
@@ -169,7 +157,6 @@ impl MyEguiApp {
         }
 
         s.update_available_buffers();
-        s.last_saved = Some(Local::now());
         if demo {
             s.buffer = r"# Header
 [ ] Something todo
@@ -272,28 +259,22 @@ impl epi::App for MyEguiApp {
             self.background_state = Some(BackgroundState::run(frame.clone()));
         }
 
-        match self.last_saved {
-            Some(v) => {
-                let save_time_elapsed = Local::now() - v > chrono::Duration::minutes(10);
-                let recent_edit = match self.last_changed {
-                    Some(last_changed) => (last_changed > v) && (Local::now() - last_changed > chrono::Duration::seconds(5)),
-                    _ => false
-                };
-                if save_time_elapsed || recent_edit {
-                    self.last_saved = Some(Local::now());
-                    let _ = self.saved_files.save(&self.buffer_id, &self.buffer);                    
-                }
-            },
-            None => {
-                self.last_saved = Some(Local::now());
-                let _ = self.saved_files.save(&self.buffer_id, &self.buffer);
+        if !self.saved {
+            let recent_edit = match self.last_changed {
+                Some(last_changed) => (Local::now() - last_changed > chrono::Duration::seconds(5)),
+                _ => false
+            };
+            if recent_edit {
+                self.saved = true;
+                let _ = self.saved_files.save(&self.buffer_id, &self.buffer);                    
             }
         }
+        
 
         let mut any_key_pressed = false;
         for event in ctx.input().events.clone() {
             if !any_key_pressed {
-                any_key_pressed = matches!(event, Event::Key { .. });
+                any_key_pressed = matches!(event, Event::Text(..)) || matches!(event, Event::Paste(..))  || matches!(event, Event::Key { .. });
             }
             match event {
                 Event::Key {
@@ -325,7 +306,7 @@ impl epi::App for MyEguiApp {
                     modifiers
                 } => {
                     if modifiers.command {
-                        self.last_saved = Some(Local::now());
+                        self.saved = true;
                         let _ = self.saved_files.save(&self.buffer_id, &self.buffer);
                     }
                 }
@@ -335,9 +316,11 @@ impl epi::App for MyEguiApp {
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                if let Some(last_saved) = self.last_saved {
-                    let time_since_last_save = Local::now() - last_saved;
-                    ui.label(format!("Last Save: {} ago" , format_duration(&time_since_last_save)));
+                if self.saved {
+                    ui.label("Saved");
+                }
+                else {
+                    ui.label("Not Saved");
                 }
                 ui.centered_and_justified(|ui| {
                     ui.label(self.buffer_id.filepath().to_str().unwrap_or("???"));
@@ -371,6 +354,7 @@ impl epi::App for MyEguiApp {
             });
 
             if text_changed {
+                self.saved = false;
                 self.last_changed = Some(Local::now());
             }
         });

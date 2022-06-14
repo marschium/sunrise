@@ -330,6 +330,7 @@ impl epi::App for MyEguiApp {
         egui::SidePanel::left("buffers").show(ctx, |ui| {
             if let Some(buffer_id) = show_note_tree(&self.available_buffers, ui) {
                 self.swap_to_buffer(&buffer_id);
+                any_key_pressed = true;
             }
         });
 

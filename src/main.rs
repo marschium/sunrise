@@ -16,6 +16,7 @@ use eframe::{
     egui::{self, TextEdit, Key, Event, Layout, text_edit::CursorRange}, epi,
 };
 use note_tree::show_note_tree;
+use regex::Regex;
 use style::CachedLayoutJobBuilder;
 use walkdir::WalkDir;
 
@@ -356,6 +357,23 @@ impl epi::App for MyEguiApp {
                     text_changed = output.response.changed();
                     self.cursor = output.cursor_range;
                     // TODO if cursor was clicked, did we click anything interesting?
+                    if output.response.clicked() {
+                        // cursor will have already been moved so just use that position
+                        if let Some(cpos) = output.cursor_range {
+                            // scan the text here and see if cursor is in the middle of a hyperlink
+                            let cur = cpos.primary.ccursor.index;
+                            let c = &output.galley.text()[..cur];
+                            let front = output.galley.text()[..cur].rfind(|ch: char| ch.is_whitespace() || ch == '\n');
+                            let back =  output.galley.text()[cur..].find(|ch: char| ch.is_whitespace() || ch == '\n');
+                            if let (Some(front), Some(back)) = (front, back) {
+                                let re = Regex::new(r".?://.?").unwrap(); // TODO cache this
+                                let selected = &output.galley.text()[front..cur + back];
+                                if re.is_match(selected) {
+                                    webbrowser::open(selected);
+                                }
+                            }
+                        }
+                    }
                 });                
             });
 

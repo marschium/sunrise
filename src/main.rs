@@ -165,7 +165,9 @@ impl MyEguiApp {
 [/] Something done
 [x] Something cancelled
 `monospaced something`
-regular text".to_string();
+regular text
+https://google.com
+".to_string();
         }
         s
     }
@@ -353,6 +355,7 @@ impl epi::App for MyEguiApp {
                     let output = TextEdit::multiline(&mut self.buffer).layouter(&mut layouter).lock_focus(true).show(ui);
                     text_changed = output.response.changed();
                     self.cursor = output.cursor_range;
+                    // TODO if cursor was clicked, did we click anything interesting?
                 });                
             });
 

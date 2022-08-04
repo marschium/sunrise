@@ -6,10 +6,10 @@ use eframe::{
     },
 };
 use nom::{
-    bytes::complete::{tag, take_until},
-    character::complete::{newline, not_line_ending, space0},
-    sequence::{tuple, delimited},
-    IResult, branch::alt,
+    bytes::complete::{tag, take_until, take_while},
+    character::{complete::{newline, not_line_ending, space0, alphanumeric1, line_ending}, is_alphabetic},
+    sequence::{tuple, delimited, terminated},
+    IResult, branch::alt, multi::fold_many1, combinator::not,
 };
 
 struct Style {
@@ -26,22 +26,6 @@ fn header(s: &str) -> IResult<&str, Style> {
             look: TextFormat {
                 font_id: FontId::new(26.0, FontFamily::Proportional),
                 color: Color32::LIGHT_GRAY,
-                ..Default::default()
-            },
-            len: span.0.len() + span.1.len() + span.2.len() + 1,
-        },
-    ))
-}
-
-fn todo_task(s: &str) -> IResult<&str, Style> {
-    let mut inner = tuple((space0, tag("[ ]"), not_line_ending, newline));
-    let (extra, span) = inner(s)?;
-    Ok((
-        extra,
-        Style {
-            look: TextFormat {
-                font_id: FontId::new(14.0, FontFamily::Proportional),
-                color: Color32::WHITE,
                 ..Default::default()
             },
             len: span.0.len() + span.1.len() + span.2.len() + 1,
@@ -98,8 +82,24 @@ fn code(s: &str) -> IResult<&str, Style> {
     ))
 }
 
+fn hyperlink(s: &str) -> IResult<&str, Style> {    
+    let mut hyper = tuple((alphanumeric1, tag("://"), fold_many1(alt((alphanumeric1, tag("."))), || "".to_owned(), |mut x: String, i| {x.push_str(i); x})));
+    let (extra, span) = hyper(s)?;
+    Ok((
+        extra,
+        Style {
+            look: TextFormat {
+                font_id: FontId::new(14.0, FontFamily::Monospace),
+                color: Color32::BLUE,
+                ..Default::default()
+            },
+            len: span.0.len() + span.1.len() + span.2.len(),
+        },
+    ))
+}
+
 fn style(s: &str) -> IResult<&str, Style> {
-    let (extra, style) = alt((header, todo_task, completed_task, cancelled_task, code))(s)?;
+    let (extra, style) = alt((header, completed_task, cancelled_task, code, hyperlink))(s)?;
     Ok((extra, style))
 }
 

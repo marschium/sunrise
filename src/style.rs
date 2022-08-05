@@ -83,14 +83,14 @@ fn code(s: &str) -> IResult<&str, Style> {
 }
 
 fn hyperlink(s: &str) -> IResult<&str, Style> {    
-    let mut hyper = tuple((alphanumeric1, tag("://"), fold_many1(alt((alphanumeric1, tag("."))), || "".to_owned(), |mut x: String, i| {x.push_str(i); x})));
+    let mut hyper = tuple((alphanumeric1, tag("://"), fold_many1(alt((alphanumeric1, tag("."), tag("/"))), || "".to_owned(), |mut x: String, i| {x.push_str(i); x})));
     let (extra, span) = hyper(s)?;
     Ok((
         extra,
         Style {
             look: TextFormat {
                 font_id: FontId::new(14.0, FontFamily::Monospace),
-                color: Color32::BLUE,
+                color: Color32::from_rgb(100, 168, 248),
                 ..Default::default()
             },
             len: span.0.len() + span.1.len() + span.2.len(),

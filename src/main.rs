@@ -167,7 +167,7 @@ impl MyEguiApp {
 [x] Something cancelled
 `monospaced something`
 regular text
-https://google.com
+https://google.com/about.html <- its google
 ".to_string();
         }
         s
@@ -357,7 +357,7 @@ impl epi::App for MyEguiApp {
                     text_changed = output.response.changed();
                     self.cursor = output.cursor_range;
                     // TODO if cursor was clicked, did we click anything interesting?
-                    if output.response.clicked() {
+                    if output.response.double_clicked() {
                         // cursor will have already been moved so just use that position
                         if let Some(cpos) = output.cursor_range {
                             // scan the text here and see if cursor is in the middle of a hyperlink

@@ -2,6 +2,7 @@
 
 mod style;
 mod note_tree;
+mod update;
 
 use std::{
     fs::File,
@@ -19,6 +20,7 @@ use note_tree::show_note_tree;
 use regex::Regex;
 use style::CachedLayoutJobBuilder;
 use walkdir::WalkDir;
+use update::{update_available, current_version};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct BufferId {
@@ -321,15 +323,22 @@ impl epi::App for MyEguiApp {
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                if self.saved {
-                    ui.label("Saved");
-                }
-                else {
-                    ui.label("Not Saved");
-                }
-                ui.centered_and_justified(|ui| {
-                    ui.label(self.buffer_id.filepath().to_str().unwrap_or("???"));
-                });  
+                ui.with_layout(egui::Layout::left_to_right(), |ui| {
+                    if self.saved {
+                        ui.label("Saved");
+                    }
+                    else {
+                        ui.label("Not Saved");
+                    }
+                    ui.centered_and_justified(|ui| {
+                        ui.label(self.buffer_id.filepath().to_str().unwrap_or("???"));
+                    });  
+                    ui.with_layout(egui::Layout::right_to_left(), |ui| {
+                        ui.add_space(8.0);
+                        ui.label(format!("v{}", current_version()));    
+                    });
+                });
+                         
             });                      
         });
         egui::SidePanel::left("buffers").show(ctx, |ui| {
@@ -386,6 +395,7 @@ impl epi::App for MyEguiApp {
 }
 
 fn main() {
+    update_available();
     let args : Vec<_> = env::args().collect();
     let app = MyEguiApp::load(args.get(1) == Some(&"--demo".to_string()));
     let mut native_options = eframe::NativeOptions::default();

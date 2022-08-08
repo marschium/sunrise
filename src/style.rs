@@ -7,7 +7,7 @@ use eframe::{
 };
 use nom::{
     bytes::complete::{tag, take_until, take_while},
-    character::{complete::{newline, not_line_ending, space0, alphanumeric1, line_ending}, is_alphabetic},
+    character::{complete::{newline, not_line_ending, space0, alphanumeric1, line_ending, satisfy}, is_alphabetic},
     sequence::{tuple, delimited, terminated},
     IResult, branch::alt, multi::fold_many1, combinator::not,
 };
@@ -82,8 +82,9 @@ fn code(s: &str) -> IResult<&str, Style> {
     ))
 }
 
-fn hyperlink(s: &str) -> IResult<&str, Style> {    
-    let mut hyper = tuple((alphanumeric1, tag("://"), fold_many1(alt((alphanumeric1, tag("."), tag("/"))), || "".to_owned(), |mut x: String, i| {x.push_str(i); x})));
+fn hyperlink(s: &str) -> IResult<&str, Style> {
+    let allowed = |c: char| !c.is_whitespace() && c != '\n';
+    let mut hyper = tuple((alphanumeric1, tag("://"), fold_many1(satisfy(allowed), || "".to_owned(), |mut x: String, i| {x.push(i); x})));
     let (extra, span) = hyper(s)?;
     Ok((
         extra,

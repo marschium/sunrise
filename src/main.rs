@@ -20,7 +20,7 @@ use note_tree::show_note_tree;
 use regex::Regex;
 use style::CachedLayoutJobBuilder;
 use walkdir::WalkDir;
-use update::{update_available, current_version};
+use update::{current_version, latest_version, LatestVersion};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct BufferId {
@@ -137,7 +137,11 @@ struct MyEguiApp {
     background_state: Option<BackgroundState>,
     cursor: Option<CursorRange>,
     last_changed: Option<chrono::DateTime<Local>>,
-    highlight_cache: CachedLayoutJobBuilder
+    highlight_cache: CachedLayoutJobBuilder,
+    // TODO move al update stuff to some struct. probably a state machine for the update process
+    latest_version: Option<LatestVersion>,
+    show_update_confirm: bool,
+    update_downloaded: bool
 }
 
 impl MyEguiApp {
@@ -169,7 +173,8 @@ impl MyEguiApp {
 [x] Something cancelled
 `monospaced something`
 regular text
-https://google.com/about.html <- its google
+https://google.com/about.html?arg=hello%20world
+
 ".to_string();
         }
         s
@@ -321,7 +326,53 @@ impl epi::App for MyEguiApp {
             }
         }
 
+
+        if self.show_update_confirm {
+            egui::Window::new("Update Confirm")
+            .title_bar(false)
+            .collapsible(false)
+            .resizable(false)
+            .default_pos(ctx.available_rect().center())
+            .show(ctx, |ui| {
+                ui.label("Update available");
+                ui.horizontal(|ui| {
+                    // TODO move logic to update module
+                    if ui.button("Download Update").clicked() {
+                        if let Some(latest_version) = &self.latest_version {
+                            // TODO progress bar
+                            // TODO run on background runtime
+                            // https://gist.github.com/giuliano-oliveira/4d11d6b3bb003dba3a1b53f43d81b30d
+                            let client = reqwest::blocking::Client::builder().user_agent("MYAPP/1.0").build().unwrap();
+                            let res = client.get(latest_version.url.clone()).send().unwrap();
+                            let mut f = File::create("update").unwrap();
+                            f.write_all(&res.bytes().unwrap());
+                            self.update_downloaded = true;
+                        }
+                    }
+                    if ui.button("Cancel").clicked() {
+                        self.show_update_confirm = false;
+                    }
+                });
+                if self.update_downloaded {
+                    if ui.button("Apply Update").clicked() {
+                        // TODO launch cmd on windows
+                        // TODO overwrite and restart on linux
+                    }
+                }
+            });
+        }
+
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
+            egui::menu::bar(ui, |ui| {
+                ui.menu_button("File", |ui| {
+                    let response = ui.button("Check For Update"); 
+                    if response.clicked() {
+                        self.latest_version = latest_version();
+                        self.show_update_confirm = self.latest_version.as_ref().map(|x| x.newer_than_current()).unwrap_or(false);
+                    }
+                });
+            });
+
             ui.horizontal(|ui| {
                 ui.with_layout(egui::Layout::left_to_right(), |ui| {
                     if self.saved {
@@ -395,7 +446,6 @@ impl epi::App for MyEguiApp {
 }
 
 fn main() {
-    update_available();
     let args : Vec<_> = env::args().collect();
     let app = MyEguiApp::load(args.get(1) == Some(&"--demo".to_string()));
     let mut native_options = eframe::NativeOptions::default();

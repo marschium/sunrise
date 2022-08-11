@@ -20,7 +20,7 @@ use note_tree::show_note_tree;
 use regex::Regex;
 use style::CachedLayoutJobBuilder;
 use walkdir::WalkDir;
-use update::{current_version, latest_version, LatestVersion};
+use update::{current_version, latest_version, LatestVersion, apply_update};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct BufferId {
@@ -355,6 +355,7 @@ impl epi::App for MyEguiApp {
                 });
                 if self.update_downloaded {
                     if ui.button("Apply Update").clicked() {
+                        apply_update(&"./update".to_owned());
                         // TODO launch cmd on windows
                         // TODO overwrite and restart on linux
                     }

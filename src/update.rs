@@ -1,4 +1,4 @@
-use std::thread::current;
+use std::{thread::current, path::{Path, PathBuf}, process::Command, os::unix::{process::CommandExt, prelude::PermissionsExt}, fs::Permissions};
 
 use eframe::egui::special_emojis::GITHUB;
 use reqwest::Client;
@@ -44,5 +44,17 @@ pub fn latest_version() -> Option<LatestVersion> {
     }
     else {
         None
+    }
+}
+
+pub fn apply_update(new_exe: &String) {    
+    if cfg!(target_os = "linux") {
+        std::fs::set_permissions(new_exe, Permissions::from_mode(0o755));
+        let exe = std::env::current_exe().unwrap();
+        let this_exe = exe.to_str().unwrap();
+        Command::new("sh").arg("-c").arg(format!("mv {new_exe} {this_exe} && {this_exe}")).exec();
+    }
+    else {
+
     }
 }

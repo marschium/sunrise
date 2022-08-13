@@ -1,26 +1,29 @@
 #![windows_subsystem = "windows"]
 
-mod style;
 mod note_tree;
+mod style;
 mod update;
 
+use std::thread::JoinHandle;
 use std::{
+    env,
     fs::File,
     io::{Read, Write},
-    path::PathBuf, ops::Sub, env,
+    ops::Sub,
+    path::PathBuf,
 };
-use std::thread::JoinHandle;
 
-use chrono::{Date, Local, LocalResult, TimeZone, Datelike};
+use chrono::{Date, Datelike, Local, LocalResult, TimeZone};
 use directories::ProjectDirs;
 use eframe::{
-    egui::{self, TextEdit, Key, Event, Layout, text_edit::CursorRange}, epi,
+    egui::{self, text_edit::CursorRange, Event, Key, Layout, TextEdit},
+    epi,
 };
 use note_tree::show_note_tree;
 use regex::Regex;
 use style::CachedLayoutJobBuilder;
+use update::{apply_update, current_version, latest_version, LatestVersion, UpdateService, UpdateServiceState};
 use walkdir::WalkDir;
-use update::{current_version, latest_version, LatestVersion, apply_update};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct BufferId {
@@ -29,15 +32,15 @@ pub struct BufferId {
 
 impl Default for BufferId {
     fn default() -> Self {
-        Self{date: Local::now().date()}
+        Self {
+            date: Local::now().date(),
+        }
     }
 }
 
 impl BufferId {
     fn new(date: Date<Local>) -> Self {
-        Self {
-            date
-        }
+        Self { date }
     }
 
     fn today() -> Self {
@@ -45,11 +48,15 @@ impl BufferId {
     }
 
     fn yesterday() -> Self {
-        Self{ date: Local::now().date().sub(chrono::Duration::days(1)) } 
+        Self {
+            date: Local::now().date().sub(chrono::Duration::days(1)),
+        }
     }
 
     fn prev(&self) -> Self {
-        Self{ date: self.date.sub(chrono::Duration::days(1)) }
+        Self {
+            date: self.date.sub(chrono::Duration::days(1)),
+        }
     }
 
     fn filepath(&self) -> PathBuf {
@@ -66,7 +73,6 @@ impl BufferId {
 struct SavedFiles {}
 
 impl SavedFiles {
-
     fn root_dir(&self) -> PathBuf {
         if let Some(project_dirs) = ProjectDirs::from("com", "marschium", "AirhornNotes") {
             project_dirs.data_dir().into()
@@ -87,7 +93,7 @@ impl SavedFiles {
             Err(e) => Err(e),
         }
     }
-    
+
     fn load(&mut self, id: &BufferId, buf: &mut String) -> Result<(), std::io::Error> {
         let mut path = self.root_dir();
         path.push(id.filepath());
@@ -108,50 +114,44 @@ impl SavedFiles {
     }
 }
 
-struct BackgroundState {
-    j: JoinHandle<()>
-}
-
-impl BackgroundState {
-    fn run(frame: epi::Frame) -> Self {
-        let j = std::thread::spawn(move || {
-            loop {
-                std::thread::sleep(std::time::Duration::from_secs(1));
-                frame.request_repaint();
-            }
-        });
-        Self {
-            j
-        }
-    }
-}
-
-
-#[derive(Default)]
 struct MyEguiApp {
     buffer_id: BufferId,
     buffer: String,
     available_buffers: Vec<BufferId>,
     saved_files: SavedFiles,
     saved: bool,
-    background_state: Option<BackgroundState>,
+    update_service: UpdateService,
     cursor: Option<CursorRange>,
     last_changed: Option<chrono::DateTime<Local>>,
     highlight_cache: CachedLayoutJobBuilder,
-    // TODO move al update stuff to some struct. probably a state machine for the update process
-    latest_version: Option<LatestVersion>,
-    show_update_confirm: bool,
-    update_downloaded: bool
+}
+
+impl Default for MyEguiApp {
+    fn default() -> Self {
+        Self {
+            buffer_id: Default::default(),
+            buffer: Default::default(),
+            available_buffers: Default::default(),
+            saved_files: Default::default(),
+            saved: Default::default(),
+            update_service: UpdateService::start(),
+            cursor: Default::default(),
+            last_changed: Default::default(),
+            highlight_cache: Default::default(),
+        }
+    }
 }
 
 impl MyEguiApp {
     pub fn load(demo: bool) -> Self {
+        //
+
         let mut s = Self::default();
         let copy_from_previous = !s.saved_files.has(&BufferId::today());
         if copy_from_previous {
             let mut id = BufferId::yesterday();
             let mut i = 0;
-            while !s.saved_files.has(&id) && i < 14{
+            while !s.saved_files.has(&id) && i < 14 {
                 id = id.prev();
                 i += 1;
             }
@@ -160,8 +160,7 @@ impl MyEguiApp {
                 let _ = s.saved_files.load(&id, &mut s.buffer);
                 let _ = s.saved_files.save(&BufferId::today(), &s.buffer);
             }
-        }
-        else {
+        } else {
             let _ = s.saved_files.load(&BufferId::today(), &mut s.buffer);
         }
 
@@ -175,7 +174,8 @@ impl MyEguiApp {
 regular text
 https://google.com/about.html?arg=hello%20world
 
-".to_string();
+"
+            .to_string();
         }
         s
     }
@@ -217,13 +217,11 @@ https://google.com/about.html?arg=hello%20world
         }
     }
 
-    
-
     fn swap_to_buffer(&mut self, id: &BufferId) {
         let _ = self.saved_files.save(&self.buffer_id, &self.buffer);
         self.buffer_id = *id;
         let _ = self.saved_files.load(&self.buffer_id, &mut self.buffer);
-    }    
+    }
 
     // replace first occurance of 'find' on the current line
     fn replace_on_current_line(&mut self, start_pos: usize, find: &str, replace: &str) -> bool {
@@ -232,12 +230,11 @@ https://google.com/about.html?arg=hello%20world
         let substr = self.buffer.get(search_start..start_pos).unwrap();
         match substr.rfind(find) {
             Some(i) => {
-                self.buffer.replace_range(i + search_start..i + search_start + find.len(), replace);
+                self.buffer
+                    .replace_range(i + search_start..i + search_start + find.len(), replace);
                 true
-            },
-            None => {
-                false
             }
+            None => false,
         }
     }
 
@@ -255,7 +252,14 @@ https://google.com/about.html?arg=hello%20world
         if !changed {
             let substr = self.buffer.get(0..cursor_pos).unwrap();
             let end_of_prev_line = substr.rfind("\n").unwrap_or(0);
-            self.buffer.insert_str(if end_of_prev_line > 0 {end_of_prev_line + 1 } else { 0 }, "[ ] ");
+            self.buffer.insert_str(
+                if end_of_prev_line > 0 {
+                    end_of_prev_line + 1
+                } else {
+                    0
+                },
+                "[ ] ",
+            );
         }
     }
 }
@@ -267,46 +271,44 @@ impl epi::App for MyEguiApp {
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
         ctx.set_visuals(egui::Visuals::dark());
-        if self.background_state.is_none() {
-            self.background_state = Some(BackgroundState::run(frame.clone()));
-        }
 
         if !self.saved {
             let recent_edit = match self.last_changed {
                 Some(last_changed) => (Local::now() - last_changed > chrono::Duration::seconds(5)),
-                _ => false
+                _ => false,
             };
             if recent_edit {
                 self.saved = true;
-                let _ = self.saved_files.save(&self.buffer_id, &self.buffer);                    
+                let _ = self.saved_files.save(&self.buffer_id, &self.buffer);
             }
         }
-        
 
         let mut any_key_pressed = false;
         for event in ctx.input().events.clone() {
             if !any_key_pressed {
-                any_key_pressed = matches!(event, Event::Text(..)) || matches!(event, Event::Paste(..))  || matches!(event, Event::Key { .. });
+                any_key_pressed = matches!(event, Event::Text(..))
+                    || matches!(event, Event::Paste(..))
+                    || matches!(event, Event::Key { .. });
             }
             match event {
                 Event::Key {
                     key: Key::M,
                     pressed: true,
-                    modifiers
+                    modifiers,
                 } => {
                     if modifiers.command {
                         match self.cursor {
                             Some(cursor) => {
                                 self.replace_task_for_cursor(cursor.primary.ccursor.index);
-                            },
+                            }
                             None => {}
                         }
-                    }                    
-                },
+                    }
+                }
                 Event::Key {
                     key: Key::T,
                     pressed: true,
-                    modifiers
+                    modifiers,
                 } => {
                     if modifiers.command {
                         self.swap_to_buffer(&BufferId::today());
@@ -315,7 +317,7 @@ impl epi::App for MyEguiApp {
                 Event::Key {
                     key: Key::S,
                     pressed: true,
-                    modifiers
+                    modifiers,
                 } => {
                     if modifiers.command {
                         self.saved = true;
@@ -326,72 +328,36 @@ impl epi::App for MyEguiApp {
             }
         }
 
-
-        if self.show_update_confirm {
-            egui::Window::new("Update Confirm")
-            .title_bar(false)
-            .collapsible(false)
-            .resizable(false)
-            .default_pos(ctx.available_rect().center())
-            .show(ctx, |ui| {
-                ui.label("Update available");
-                ui.horizontal(|ui| {
-                    // TODO move logic to update module
-                    if ui.button("Download Update").clicked() {
-                        if let Some(latest_version) = &self.latest_version {
-                            // TODO progress bar
-                            // TODO run on background runtime
-                            // https://gist.github.com/giuliano-oliveira/4d11d6b3bb003dba3a1b53f43d81b30d
-                            let client = reqwest::blocking::Client::builder().user_agent("MYAPP/1.0").build().unwrap();
-                            let res = client.get(latest_version.url.clone()).send().unwrap();
-                            let mut f = File::create("update").unwrap();
-                            f.write_all(&res.bytes().unwrap());
-                            self.update_downloaded = true;
-                        }
-                    }
-                    if ui.button("Cancel").clicked() {
-                        self.show_update_confirm = false;
-                    }
-                });
-                if self.update_downloaded {
-                    if ui.button("Apply Update").clicked() {
-                        apply_update(&"./update".to_owned());
-                        // TODO launch cmd on windows
-                        // TODO overwrite and restart on linux
-                    }
-                }
-            });
-        }
-
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    let response = ui.button("Check For Update"); 
-                    if response.clicked() {
-                        self.latest_version = latest_version();
-                        self.show_update_confirm = self.latest_version.as_ref().map(|x| x.newer_than_current()).unwrap_or(false);
-                    }
-                });
-            });
 
             ui.horizontal(|ui| {
                 ui.with_layout(egui::Layout::left_to_right(), |ui| {
                     if self.saved {
                         ui.label("Saved");
-                    }
-                    else {
+                    } else {
                         ui.label("Not Saved");
                     }
                     ui.centered_and_justified(|ui| {
                         ui.label(self.buffer_id.filepath().to_str().unwrap_or("???"));
-                    });  
+                    });
                     ui.with_layout(egui::Layout::right_to_left(), |ui| {
                         ui.add_space(8.0);
-                        ui.label(format!("v{}", current_version()));    
+                        ui.label(format!("v{}", current_version()));
+
+                        let current_update_status = self.update_service.state();
+                        match current_update_status {
+                            UpdateServiceState::Downloaded => {
+                                if ui.button("Update").clicked() {
+                                    apply_update(&"./update".to_owned());
+                                }
+                            },
+                            _ => {}
+                        }
                     });
+
+                    
                 });
-                         
-            });                      
+            });
         });
         egui::SidePanel::left("buffers").show(ctx, |ui| {
             if let Some(buffer_id) = show_note_tree(&self.available_buffers, ui) {
@@ -414,7 +380,10 @@ impl epi::App for MyEguiApp {
             let layout = Layout::centered_and_justified(ui.layout().main_dir());
             ui.allocate_ui_with_layout(ui.available_size(), layout, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    let output = TextEdit::multiline(&mut self.buffer).layouter(&mut layouter).lock_focus(true).show(ui);
+                    let output = TextEdit::multiline(&mut self.buffer)
+                        .layouter(&mut layouter)
+                        .lock_focus(true)
+                        .show(ui);
                     text_changed = output.response.changed();
                     self.cursor = output.cursor_range;
                     // TODO if cursor was clicked, did we click anything interesting?
@@ -424,8 +393,10 @@ impl epi::App for MyEguiApp {
                             // scan the text here and see if cursor is in the middle of a hyperlink
                             let cur = cpos.primary.ccursor.index;
                             let c = &output.galley.text()[..cur];
-                            let front = output.galley.text()[..cur].rfind(|ch: char| ch.is_whitespace() || ch == '\n');
-                            let back =  output.galley.text()[cur..].find(|ch: char| ch.is_whitespace() || ch == '\n');
+                            let front = output.galley.text()[..cur]
+                                .rfind(|ch: char| ch.is_whitespace() || ch == '\n');
+                            let back = output.galley.text()[cur..]
+                                .find(|ch: char| ch.is_whitespace() || ch == '\n');
                             if let (Some(front), Some(back)) = (front, back) {
                                 let re = Regex::new(r".?://.?").unwrap(); // TODO cache this
                                 let selected = &output.galley.text()[front..cur + back];
@@ -435,7 +406,7 @@ impl epi::App for MyEguiApp {
                             }
                         }
                     }
-                });                
+                });
             });
 
             if text_changed {
@@ -447,7 +418,7 @@ impl epi::App for MyEguiApp {
 }
 
 fn main() {
-    let args : Vec<_> = env::args().collect();
+    let args: Vec<_> = env::args().collect();
     let app = MyEguiApp::load(args.get(1) == Some(&"--demo".to_string()));
     let mut native_options = eframe::NativeOptions::default();
     native_options.maximized = true;

@@ -3,7 +3,7 @@ use std::{
     io::Write,
     os::unix::{prelude::PermissionsExt, process::CommandExt},
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, exit},
     sync::{Arc, Condvar, Mutex},
     thread::{current, JoinHandle},
 };
@@ -16,7 +16,7 @@ pub const GITHUB_VERSION: Option<&'static str> = option_env!("build_version");
 pub const UPDATE_URL: &'static str =
     "https://api.github.com/repos/marschium/AirhornNotes/releases/latest";
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LatestVersion {
     pub ver: semver::Version,
     pub url: String,
@@ -47,12 +47,19 @@ pub fn latest_version() -> Option<LatestVersion> {
             let tag_name = j["tag_name"].as_str()?;
             let ver = semver::Version::parse(&tag_name[1..]).ok()?;
             let asset = (j["assets"].as_array())?.get(0)?;
-            let url = asset["browser_download_url"].as_str()?;
+            let url =  
+            if cfg!(target_os = "linux") {
+                let asset = (j["assets"].as_array())?.iter().find(|x| !x["name"].as_str().unwrap_or("").ends_with(".exe"));
+                asset?["browser_download_url"].as_str()
+            }
+            else {
+                let asset = (j["assets"].as_array())?.iter().find(|x| x["name"].as_str().unwrap_or("").ends_with(".exe"));
+                asset?["browser_download_url"].as_str()
+            }?;
             Some(LatestVersion {
                 ver,
                 url: url.to_string(),
             })
-            // TODO pick the correct asset based on OS
         } else {
             None
         }
@@ -61,21 +68,8 @@ pub fn latest_version() -> Option<LatestVersion> {
     }
 }
 
-pub fn apply_update(new_exe: &String) {
-    if cfg!(target_os = "linux") {
-        std::fs::set_permissions(new_exe, Permissions::from_mode(0o755));
-        let exe = std::env::current_exe().unwrap();
-        let this_exe = exe.to_str().unwrap();
-        Command::new("sh")
-            .arg("-c")
-            .arg(format!("mv {new_exe} {this_exe} && {this_exe}"))
-            .exec();
-    } else {
-    }
-}
 
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateServiceState {
     Checking,
     Unavailable,
@@ -142,5 +136,24 @@ impl UpdateService {
     pub fn state(&self) -> UpdateServiceState {
         let l = self.state_pair.0.lock().unwrap();
         l.clone()
+    }
+
+    pub fn apply(&self) {
+        if cfg!(target_os = "linux") {
+            if self.state() == UpdateServiceState::Downloaded {
+                let new_exe = "./update";
+                std::fs::set_permissions(new_exe, Permissions::from_mode(0o755));
+                let exe = std::env::current_exe().unwrap();
+                let this_exe = exe.to_str().unwrap();
+                Command::new("sh")
+                    .arg("-c")
+                    .arg(format!("mv {new_exe} {this_exe} && {this_exe}"))
+                    .exec();
+            }
+
+            
+        } else {
+            exit(1);
+        }
     }
 }

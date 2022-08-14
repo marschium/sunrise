@@ -4,7 +4,6 @@ mod note_tree;
 mod style;
 mod update;
 
-use std::thread::JoinHandle;
 use std::{
     env,
     fs::File,
@@ -22,7 +21,7 @@ use eframe::{
 use note_tree::show_note_tree;
 use regex::Regex;
 use style::CachedLayoutJobBuilder;
-use update::{apply_update, current_version, latest_version, LatestVersion, UpdateService, UpdateServiceState};
+use update::{current_version, UpdateService, UpdateServiceState};
 use walkdir::WalkDir;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -348,7 +347,7 @@ impl epi::App for MyEguiApp {
                         match current_update_status {
                             UpdateServiceState::Downloaded => {
                                 if ui.button("Update").clicked() {
-                                    apply_update(&"./update".to_owned());
+                                    self.update_service.apply();
                                 }
                             },
                             _ => {}

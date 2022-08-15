@@ -154,7 +154,19 @@ impl UpdateService {
         
         #[cfg(target_os = "windows")]
         {
-            exit(1)
+            if self.state() == UpdateServiceState::Downloaded {
+                let new_exe = "./update";
+                let pid = std::process::id();
+                let exe = std::env::current_exe().unwrap();
+                let this_exe = exe.to_str().unwrap();
+                let e = Command::new("cmd")
+                    .arg("/C")
+                    .arg(format!("taskkill /F /PID {pid} && waitfor NEVERHAPPENINGPAL /t 10 2>NUL & move /y {new_exe} {this_exe} && {this_exe}"))
+                    .output()
+                    .expect("Update command failed");
+                println!("{}", String::from_utf8_lossy(&e.stdout));
+                println!("{}", String::from_utf8_lossy(&e.stderr));
+            }
         }
     }
 }

@@ -1,15 +1,14 @@
 use std::{
     fs::{File, Permissions},
     io::Write,
-    os::unix::{prelude::PermissionsExt, process::CommandExt},
     path::{Path, PathBuf},
     process::{Command, exit},
     sync::{Arc, Condvar, Mutex},
     thread::{current, JoinHandle},
 };
 
-use eframe::egui::special_emojis::GITHUB;
-use reqwest::Client;
+#[cfg(target_os = "linux")]
+use std::os::unix::{prelude::PermissionsExt, process::CommandExt};
 
 pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 pub const GITHUB_VERSION: Option<&'static str> = option_env!("build_version");
@@ -139,7 +138,8 @@ impl UpdateService {
     }
 
     pub fn apply(&self) {
-        if cfg!(target_os = "linux") {
+        #[cfg(target_os = "linux")]
+        {
             if self.state() == UpdateServiceState::Downloaded {
                 let new_exe = "./update";
                 std::fs::set_permissions(new_exe, Permissions::from_mode(0o755));
@@ -150,10 +150,11 @@ impl UpdateService {
                     .arg(format!("mv {new_exe} {this_exe} && {this_exe}"))
                     .exec();
             }
-
-            
-        } else {
-            exit(1);
+        }
+        
+        #[cfg(target_os = "windows")]
+        {
+            exit(1)
         }
     }
 }

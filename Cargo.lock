@@ -3,23 +3,6 @@
 version = 3
 
 [[package]]
-name = "AirhornNotes"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "directories",
- "eframe",
- "itertools",
- "nom",
- "regex",
- "reqwest",
- "semver",
- "serde_json",
- "walkdir",
- "webbrowser 0.7.1",
-]
-
-[[package]]
 name = "ab_glyph"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2075,6 +2058,23 @@ name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
+
+[[package]]
+name = "sunrise"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "directories",
+ "eframe",
+ "itertools",
+ "nom",
+ "regex",
+ "reqwest",
+ "semver",
+ "serde_json",
+ "walkdir",
+ "webbrowser 0.7.1",
+]
 
 [[package]]
 name = "syn"

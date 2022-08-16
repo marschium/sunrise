@@ -32,8 +32,8 @@ jobs:
       run: cargo build --release
     - uses: actions/upload-artifact@v3
       with:
-        name: AirhornNotes.x86_64
-        path: target/release/AirhornNotes
+        name: sunrise.x86_64
+        path: target/release/sunrise
         
   build_windows:
     needs:
@@ -47,8 +47,8 @@ jobs:
       run: cargo build --release
     - uses: actions/upload-artifact@v3
       with:
-        name: AirhornNotes.exe
-        path: target/release/AirhornNotes.exe
+        name: sunrise.exe
+        path: target/release/sunrise.exe
         
   release:
     runs-on: ubuntu-latest
@@ -62,7 +62,7 @@ jobs:
         path: artifacts
     - uses: ncipollo/release-action@v1
       with:
-        artifacts: "artifacts/AirhornNotes.exe/AirhornNotes.exe,artifacts/AirhornNotes.x86_64/AirhornNotes"
+        artifacts: "artifacts/sunrise.exe/sunrise.exe,artifacts/sunrise.x86_64/sunrise"
         tag: ${{ needs.tag_version.outputs.output1 }}
         commit: "master"
         token: ${{ secrets.GITHUB_TOKEN }}

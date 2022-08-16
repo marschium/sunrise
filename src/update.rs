@@ -13,7 +13,7 @@ use std::os::unix::{prelude::PermissionsExt, process::CommandExt};
 pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 pub const GITHUB_VERSION: Option<&'static str> = option_env!("build_version");
 pub const UPDATE_URL: &'static str =
-    "https://api.github.com/repos/marschium/AirhornNotes/releases/latest";
+    "https://api.github.com/repos/marschium/sunrise/releases/latest";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LatestVersion {

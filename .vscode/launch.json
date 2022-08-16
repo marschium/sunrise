@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'AirhornNotes'",
+            "name": "Debug executable 'sunrise'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=AirhornNotes",
-                    "--package=AirhornNotes"
+                    "--bin=sunrise",
+                    "--package=sunrise"
                 ],
                 "filter": {
-                    "name": "AirhornNotes",
+                    "name": "sunrise",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'AirhornNotes'",
+            "name": "Debug unit tests in executable 'sunrise'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=AirhornNotes",
-                    "--package=AirhornNotes"
+                    "--bin=sunrise",
+                    "--package=sunrise"
                 ],
                 "filter": {
-                    "name": "AirhornNotes",
+                    "name": "sunrise",
                     "kind": "bin"
                 }
             },

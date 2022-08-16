@@ -73,7 +73,7 @@ struct SavedFiles {}
 
 impl SavedFiles {
     fn root_dir(&self) -> PathBuf {
-        if let Some(project_dirs) = ProjectDirs::from("com", "marschium", "AirhornNotes") {
+        if let Some(project_dirs) = ProjectDirs::from("com", "marschium", "sunrise") {
             project_dirs.data_dir().into()
         } else {
             ".".into()
@@ -265,7 +265,7 @@ https://google.com/about.html?arg=hello%20world
 
 impl epi::App for MyEguiApp {
     fn name(&self) -> &str {
-        "Airhorn Notes"
+        "sunrise"
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {

@@ -2,8 +2,10 @@
 name = "sunrise"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 
 [dependencies]
 chrono = "0.4.19"
@@ -17,3 +19,6 @@ webbrowser = "0.7.1"
 semver = "1.0.13"
 serde_json = "1.0.83"
 reqwest = { version = "0.11.11", features = ["blocking", "json"] }
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1.12"

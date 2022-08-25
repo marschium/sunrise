@@ -123,6 +123,7 @@ struct MyEguiApp {
     cursor: Option<CursorRange>,
     last_changed: Option<chrono::DateTime<Local>>,
     highlight_cache: CachedLayoutJobBuilder,
+    scaled: bool
 }
 
 impl Default for MyEguiApp {
@@ -137,6 +138,7 @@ impl Default for MyEguiApp {
             cursor: Default::default(),
             last_changed: Default::default(),
             highlight_cache: Default::default(),
+            scaled: false
         }
     }
 }
@@ -269,6 +271,12 @@ impl epi::App for MyEguiApp {
     }
 
     fn update(&mut self, ctx: &egui::Context, frame: &epi::Frame) {
+        if self.scaled {
+            ctx.set_pixels_per_point(1.8);
+        }
+        else {
+            ctx.set_pixels_per_point(1.2);
+        }
         ctx.set_visuals(egui::Visuals::dark());
 
         if !self.saved {
@@ -331,13 +339,13 @@ impl epi::App for MyEguiApp {
 
             ui.horizontal(|ui| {
                 ui.with_layout(egui::Layout::left_to_right(), |ui| {
-                    if self.saved {
-                        ui.label("Saved");
-                    } else {
-                        ui.label("Not Saved");
-                    }
+                    ui.menu_button("Settings", |ui| {
+                        ui.checkbox(&mut self.scaled, "Old Man Mode");
+                    });
+                    let save_status = if self.saved { "Saved" } else { "Not Saved" };
                     ui.centered_and_justified(|ui| {
-                        ui.label(self.buffer_id.filepath().to_str().unwrap_or("???"));
+                        let s = self.buffer_id.filepath().to_str().unwrap_or("???").to_owned() + " (" + save_status + ")"; 
+                        ui.label(s);
                     });
                     ui.with_layout(egui::Layout::right_to_left(), |ui| {
                         ui.add_space(8.0);
@@ -370,6 +378,7 @@ impl epi::App for MyEguiApp {
                 if any_key_pressed {
                     self.highlight_cache.clear();
                 }
+                // TODO pass the style from the ui into highligther
                 let mut layout_job = self.highlight_cache.highlight(string);
                 layout_job.wrap_width = wrap_width;
                 ui.fonts().layout_job(layout_job)

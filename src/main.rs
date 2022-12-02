@@ -168,6 +168,7 @@ impl MyEguiApp {
         s.update_available_buffers();
         if demo {
             s.buffer = r"# Header
+## Sub Header
 [ ] Something todo
 [/] Something done
 [x] Something cancelled

@@ -9,7 +9,7 @@ use nom::{
     bytes::complete::{tag, take_until, take_while},
     character::{complete::{newline, not_line_ending, space0, alphanumeric1, line_ending, satisfy}, is_alphabetic},
     sequence::{tuple, delimited, terminated},
-    IResult, branch::alt, multi::fold_many1, combinator::not,
+    IResult, branch::alt, multi::{fold_many1, many1}, combinator::not,
 };
 
 struct Style {
@@ -18,13 +18,18 @@ struct Style {
 }
 
 fn header(s: &str) -> IResult<&str, Style> {
-    let mut inner = tuple((space0, tag("#"), not_line_ending, newline));
+    let mut inner = tuple((space0, many1(tag("#")), not_line_ending, newline));
     let (extra, span) = inner(s)?;
+    let num_tags = span.1.len() as f32;
+    let mut font_size = 26.0 - (4.0 * (num_tags - 1.0));
+    if font_size < 16.0 {
+        font_size = 16.0
+    }
     Ok((
         extra,
         Style {
             look: TextFormat {
-                font_id: FontId::new(26.0, FontFamily::Proportional),
+                font_id: FontId::new(font_size, FontFamily::Proportional),
                 color: Color32::LIGHT_GRAY,
                 ..Default::default()
             },
